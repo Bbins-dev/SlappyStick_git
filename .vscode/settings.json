@@ -51,5 +51,5 @@
         "temp/": true,
         "Temp/": true
     },
-    "dotnet.defaultSolution": "SlappyStick.sln"
+    "dotnet.defaultSolution": "SlappyStick_git.sln"
 }
