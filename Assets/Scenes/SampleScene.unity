@@ -226,8 +226,8 @@ GameObject:
   - component: {fileID: 1033100410}
   - component: {fileID: 1033100409}
   m_Layer: 0
-  m_Name: Fulcrum
-  m_TagString: Untagged
+  m_Name: Edge_Callider_2D
+  m_TagString: Fulcrum
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
   m_StaticEditorFlags: 0
@@ -294,7 +294,7 @@ EdgeCollider2D:
   m_Offset: {x: 0, y: 0}
   m_EdgeRadius: 0
   m_Points:
-  - {x: 0.00065440685, y: -0.05914712}
+  - {x: 0.00065440685, y: 0.19085288}
   - {x: 0.0006021336, y: 0.44101152}
   m_AdjacentStartPoint: {x: 0, y: 0}
   m_AdjacentEndPoint: {x: 0, y: 0}
@@ -308,13 +308,12 @@ Transform:
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 1033100408}
   serializedVersion: 2
-  m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
-  m_LocalPosition: {x: -0.6, y: -3.17, z: 0}
-  m_LocalScale: {x: 1, y: 1, z: 1}
+  m_LocalRotation: {x: -0, y: -0, z: -0, w: 1}
+  m_LocalPosition: {x: -0.008571149, y: -0.94673324, z: 0}
+  m_LocalScale: {x: 14.285715, y: 3.4348712, z: 4.5787544}
   m_ConstrainProportionsScale: 0
-  m_Children:
-  - {fileID: 2115192432}
-  m_Father: {fileID: 0}
+  m_Children: []
+  m_Father: {fileID: 2115192432}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
 --- !u!1 &1240561977
 GameObject:
@@ -392,7 +391,7 @@ Rigidbody2D:
   m_Simulated: 1
   m_UseFullKinematicContacts: 0
   m_UseAutoMass: 0
-  m_Mass: 100
+  m_Mass: 1000
   m_LinearDrag: 0
   m_AngularDrag: 0.05
   m_GravityScale: 1
@@ -468,7 +467,7 @@ Transform:
   m_GameObject: {fileID: 1240561977}
   serializedVersion: 2
   m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
-  m_LocalPosition: {x: 0.8, y: 3.66, z: 0}
+  m_LocalPosition: {x: 0.99, y: 3.89, z: 0}
   m_LocalScale: {x: 0.46, y: 0.49, z: 1}
   m_ConstrainProportionsScale: 0
   m_Children: []
@@ -643,7 +642,7 @@ GameObject:
   - component: {fileID: 2115192432}
   - component: {fileID: 2115192433}
   m_Layer: 0
-  m_Name: Capsule
+  m_Name: Falcrum
   m_TagString: Untagged
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
@@ -657,12 +656,13 @@ Transform:
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 2115192431}
   serializedVersion: 2
-  m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
-  m_LocalPosition: {x: 0.001, y: 0.1834, z: 0}
-  m_LocalScale: {x: 0.07, y: 0.2535347, z: 0.2184}
+  m_LocalRotation: {x: -0, y: -0, z: -0, w: 1}
+  m_LocalPosition: {x: -0.59940004, y: -2.8717, z: 0}
+  m_LocalScale: {x: 0.07, y: 0.2621059, z: 0.2184}
   m_ConstrainProportionsScale: 0
-  m_Children: []
-  m_Father: {fileID: 1033100411}
+  m_Children:
+  - {fileID: 1033100411}
+  m_Father: {fileID: 0}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
 --- !u!212 &2115192433
 SpriteRenderer:
@@ -705,8 +705,8 @@ SpriteRenderer:
   m_SortingLayerID: 0
   m_SortingLayer: 0
   m_SortingOrder: 0
-  m_Sprite: {fileID: -9095717837082945937, guid: 207ee8102dd4143d288186ef0be518ee, type: 3}
-  m_Color: {r: 0.3917365, g: 1, b: 0, a: 1}
+  m_Sprite: {fileID: 7482667652216324306, guid: 75f5f34dc1b5347e0b8351032682f224, type: 3}
+  m_Color: {r: 1, g: 1, b: 1, a: 1}
   m_FlipX: 0
   m_FlipY: 0
   m_DrawMode: 0
@@ -721,6 +721,6 @@ SceneRoots:
   m_ObjectHideFlags: 0
   m_Roots:
   - {fileID: 519420032}
-  - {fileID: 1033100411}
   - {fileID: 2052609038}
   - {fileID: 1240561981}
+  - {fileID: 2115192432}
