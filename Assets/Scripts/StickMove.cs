@@ -1,5 +1,6 @@
 using System.Collections;
 using UnityEngine;
+using TMPro;                  // ← TextMeshPro 네임스페이스
 
 [RequireComponent(typeof(Rigidbody2D))]
 public class StickMove : MonoBehaviour
@@ -26,6 +27,10 @@ public class StickMove : MonoBehaviour
     [Tooltip("홀드 시간 대비 회전력 조절 계수 (빠르게/느리게 회전 조절)")]
     public float torqueMultiplier = 1f; // 회전 속도 조절 계수
 
+    [Header("UI Settings")]
+    [Tooltip("홀드 시간 표시용 TMP Text")]
+    public TMP_Text holdTimeTMP;   // 인스펙터에 드래그로 할당
+
     private Rigidbody2D rb;
     private bool isHolding = false;
     private float holdTime = 0f;
@@ -39,6 +44,16 @@ public class StickMove : MonoBehaviour
         rb = GetComponent<Rigidbody2D>();
         startPosition = transform.position;
         startRotation = transform.rotation;
+
+        if (holdTimeTMP == null)
+        {
+            Debug.LogError("⚠ holdTimeTMP가 연결되지 않았습니다!");
+        }
+        else
+        {
+            holdTimeTMP.gameObject.SetActive(true);
+            holdTimeTMP.text = "UI Test :  OK";
+        }
     }
 
     void Update()
@@ -48,6 +63,7 @@ public class StickMove : MonoBehaviour
         {
             isHolding = true;
             holdTime = 0f;
+            if (holdTimeTMP != null) holdTimeTMP.gameObject.SetActive(true);
         }
 
         // 마우스를 누르고 있는 동안 홀드 시간 증가
@@ -55,6 +71,9 @@ public class StickMove : MonoBehaviour
         {
             holdTime += Time.deltaTime;
             holdTime = Mathf.Clamp(holdTime, 0f, maxHoldTime); // 최대 홀드 시간 제한
+
+            if (holdTimeTMP != null)
+                holdTimeTMP.text = $"{holdTime:F2} / {maxHoldTime:F2} sec";
         }
 
         // 마우스 버튼 뗄 때 발사 처리 시작
@@ -63,6 +82,12 @@ public class StickMove : MonoBehaviour
             isHolding = false;
             float holdPercent = holdTime / maxHoldTime; // 홀드 비율 (0~1)
             StartCoroutine(LaunchAfterDelay(holdPercent));
+
+            if (holdTimeTMP != null)
+            {
+                holdTimeTMP.text = "";
+                holdTimeTMP.gameObject.SetActive(false);
+            }
         }
     }
 
