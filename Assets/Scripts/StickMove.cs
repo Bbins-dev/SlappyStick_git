@@ -38,12 +38,16 @@ public class StickMove : MonoBehaviour
     // 최초 위치 및 회전 저장
     private Vector3 startPosition;
     private Quaternion startRotation;
+    private CameraFollow cameraFollow;
+    private bool hasLaunched = false;  // block input after launch until respawn
 
     void Start()
     {
         rb = GetComponent<Rigidbody2D>();
         startPosition = transform.position;
         startRotation = transform.rotation;
+
+        cameraFollow = Camera.main.GetComponent<CameraFollow>();
 
         if (holdTimeTMP == null)
         {
@@ -58,6 +62,11 @@ public class StickMove : MonoBehaviour
 
     void Update()
     {
+
+        // 카메라가 전환 완료 전까지 입력 무시
+        if (cameraFollow == null || !cameraFollow.IsSwitchedToFollow || hasLaunched)
+            return;
+
         // 마우스 버튼 누르기 시작
         if (Input.GetMouseButtonDown(0))
         {
@@ -82,6 +91,7 @@ public class StickMove : MonoBehaviour
             isHolding = false;
             float holdPercent = holdTime / maxHoldTime; // 홀드 비율 (0~1)
             StartCoroutine(LaunchAfterDelay(holdPercent));
+            hasLaunched = true; // 발사 후 입력 차단
 
             if (holdTimeTMP != null)
             {
@@ -129,5 +139,7 @@ public class StickMove : MonoBehaviour
         rb.angularVelocity = 0f;
         transform.position = startPosition;
         transform.rotation = startRotation;
+
+        hasLaunched = false;  // Respawn 후 다시 입력 허용
     }
 }
