@@ -171,8 +171,8 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: a4c6efd34e8e204429dc8f2e84daf263, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  maxHoldTime: 2
-  maxLaunchForce: 5
+  maxHoldTime: 1
+  maxLaunchForce: 3
   launchDelay: 0.125
   launchX: 1.5
   launchY: 1
