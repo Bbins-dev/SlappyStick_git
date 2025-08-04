@@ -1,73 +1,93 @@
 using System.Collections;
 using UnityEngine;
-using TMPro;                  // ← TextMeshPro 네임스페이스
+using TMPro;
 
 [RequireComponent(typeof(Rigidbody2D))]
 public class StickMove : MonoBehaviour
 {
+    [Header("Positioning Settings")]
+    [Tooltip("Max horizontal drag range from start position")]
+    public float positionRange = 0.5f;
+
     [Header("Hold Settings")]
-    [Tooltip("마우스 최대 홀드 시간 (초)")]
-    public float maxHoldTime = 2f; // 최대 홀드 시간 (public으로 조절 가능)
+    [Tooltip("Maximum mouse hold time (seconds)")]
+    public float maxHoldTime = 0.5f;
 
     [Header("Launch Settings")]
-    [Tooltip("우상향으로 발사할 때의 최대 힘")]
-    public float maxLaunchForce = 5f; // 최대 힘
-    [Tooltip("발사 시 적용되는 지연 시간 (초)")]
-    public float launchDelay = 0.125f; // 발사 지연 시간
+    [Tooltip("Maximum launch force at 100% hold")]
+    public float maxLaunchForce = 3f;
+    [Tooltip("Delay before launch after mouse release (seconds)")]
+    public float launchDelay = 0.125f;
 
     [Header("Launch Direction")]
-    [Tooltip("발사 방향의 X축 비율")]
-    public float launchX = 1.5f; // X 방향 계수
-    [Tooltip("발사 방향의 Y축 비율")]
-    public float launchY = 1f;   // Y 방향 계수
+    [Tooltip("X component of the launch direction")]
+    public float launchX = 1.5f;
+    [Tooltip("Y component of the launch direction")]
+    public float launchY = 1f;
 
     [Header("Rotation Settings")]
-    [Tooltip("홀드 100%일 때 적용되는 최대 회전력")]
-    public float maxTorque = 200f; // 회전력 최대값
-    [Tooltip("홀드 시간 대비 회전력 조절 계수 (빠르게/느리게 회전 조절)")]
-    public float torqueMultiplier = 1f; // 회전 속도 조절 계수
+    [Tooltip("Maximum torque at 100% hold")]
+    public float maxTorque = 25f;
+    [Tooltip("Multiplier to adjust rotation speed")]
+    public float torqueMultiplier = 1f;
 
     [Header("UI Settings")]
-    [Tooltip("홀드 시간 표시용 TMP Text")]
-    public TMP_Text holdTimeTMP;   // 인스펙터에 드래그로 할당
+    [Tooltip("TMP Text for displaying hold time")]
+    public TMP_Text holdTimeTMP;
 
     private Rigidbody2D rb;
-    private bool isHolding = false;
-    private float holdTime = 0f;
-
-    // 최초 위치 및 회전 저장
     private Vector3 startPosition;
     private Quaternion startRotation;
-    private CameraFollow cameraFollow;
-    private bool hasLaunched = false;  // block input after launch until respawn
+    private RigidbodyConstraints2D originalConstraints;
+
+    private bool isPositioning = true;
+    private bool isHolding = false;
+    private bool hasLaunched = false;
+    private float holdTime = 0f;
 
     void Start()
     {
         rb = GetComponent<Rigidbody2D>();
         startPosition = transform.position;
         startRotation = transform.rotation;
+        originalConstraints = rb.constraints;
 
-        cameraFollow = Camera.main.GetComponent<CameraFollow>();
+        // positioning 모드 진입: Y이동·회전 동결
+        isPositioning = true;
+        rb.constraints = RigidbodyConstraints2D.FreezePositionY | RigidbodyConstraints2D.FreezeRotation;
 
-        if (holdTimeTMP == null)
-        {
-            Debug.LogError("⚠ holdTimeTMP가 연결되지 않았습니다!");
-        }
-        else
-        {
-            holdTimeTMP.gameObject.SetActive(true);
-            holdTimeTMP.text = "UI Test :  OK";
-        }
+        if (holdTimeTMP != null)
+            holdTimeTMP.gameObject.SetActive(false);
     }
 
     void Update()
     {
+        // 1) positioning 단계: 좌우 드래그만 허용
+        if (isPositioning)
+        {
+            if (Input.GetMouseButton(0))
+            {
+                Vector3 world = Camera.main.ScreenToWorldPoint(Input.mousePosition);
+                float clampedX = Mathf.Clamp(world.x,
+                    startPosition.x - positionRange,
+                    startPosition.x + positionRange);
+                transform.position = new Vector3(clampedX, startPosition.y, startPosition.z);
+            }
 
-        // 카메라가 전환 완료 전까지 입력 무시
-        if (cameraFollow == null || !cameraFollow.IsSwitchedToFollow || hasLaunched)
+            if (Input.GetMouseButtonUp(0))
+            {
+                // 드래그 해제 시 바로 떨어지도록 물리 재활성화
+                isPositioning = false;
+                rb.constraints = originalConstraints;
+            }
+            return;
+        }
+
+        // 2) 이미 발사했거나 카메라 전환 전이라면 입력 무시
+        if (hasLaunched)
             return;
 
-        // 마우스 버튼 누르기 시작
+        // 3) 클릭 앤 홀드로 발사
         if (Input.GetMouseButtonDown(0))
         {
             isHolding = true;
@@ -75,24 +95,20 @@ public class StickMove : MonoBehaviour
             if (holdTimeTMP != null) holdTimeTMP.gameObject.SetActive(true);
         }
 
-        // 마우스를 누르고 있는 동안 홀드 시간 증가
         if (isHolding)
         {
             holdTime += Time.deltaTime;
-            holdTime = Mathf.Clamp(holdTime, 0f, maxHoldTime); // 최대 홀드 시간 제한
-
+            holdTime = Mathf.Clamp(holdTime, 0f, maxHoldTime);
             if (holdTimeTMP != null)
-                holdTimeTMP.text = $"{holdTime:F2} / {maxHoldTime:F2} sec";
+                holdTimeTMP.text = $"{holdTime:F2} / {maxHoldTime:F2}";
         }
 
-        // 마우스 버튼 뗄 때 발사 처리 시작
         if (Input.GetMouseButtonUp(0) && isHolding)
         {
             isHolding = false;
-            float holdPercent = holdTime / maxHoldTime; // 홀드 비율 (0~1)
-            StartCoroutine(LaunchAfterDelay(holdPercent));
-            hasLaunched = true; // 발사 후 입력 차단
-
+            float p = holdTime / maxHoldTime;
+            StartCoroutine(LaunchAfterDelay(p));
+            hasLaunched = true;
             if (holdTimeTMP != null)
             {
                 holdTimeTMP.text = "";
@@ -104,42 +120,37 @@ public class StickMove : MonoBehaviour
     private IEnumerator LaunchAfterDelay(float holdPercent)
     {
         yield return new WaitForSeconds(launchDelay);
-
-        // 발사 방향 (x 비중을 높여서 더 오른쪽으로)
-        Vector2 launchDirection = new Vector2(launchX, launchY).normalized;
-
-        // 힘 적용
-        rb.AddForce(launchDirection * maxLaunchForce * holdPercent, ForceMode2D.Impulse);
-
-        // 회전력 적용
+        Vector2 dir = new Vector2(launchX, launchY).normalized;
+        rb.AddForce(dir * maxLaunchForce * holdPercent, ForceMode2D.Impulse);
         float torque = maxTorque * holdPercent * torqueMultiplier;
-        rb.AddTorque(-torque, ForceMode2D.Impulse); // 시계 방향 회전
+        rb.AddTorque(-torque, ForceMode2D.Impulse);
     }
 
-    // Respawn 태그 닿으면 초기화
-    private void OnTriggerEnter2D(Collider2D collision)
+    private void OnTriggerEnter2D(Collider2D c)
     {
-        if (collision.CompareTag("Respawn"))
-        {
+        if (c.CompareTag("Respawn"))
             ResetStick();
-        }
     }
 
-    private void OnCollisionEnter2D(Collision2D collision)
+    private void OnCollisionEnter2D(Collision2D c)
     {
-        if (collision.collider.CompareTag("Respawn"))
-        {
+        if (c.collider.CompareTag("Respawn"))
             ResetStick();
-        }
     }
 
     private void ResetStick()
     {
+        // 위치·회전·속도 리셋
         rb.velocity = Vector2.zero;
         rb.angularVelocity = 0f;
         transform.position = startPosition;
         transform.rotation = startRotation;
 
-        hasLaunched = false;  // Respawn 후 다시 입력 허용
+        // positioning 모드 재진입
+        isPositioning = true;
+        rb.constraints = RigidbodyConstraints2D.FreezePositionY | RigidbodyConstraints2D.FreezeRotation;
+
+        // 발사 상태 초기화
+        hasLaunched = false;
     }
 }
