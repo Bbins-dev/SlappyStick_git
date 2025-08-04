@@ -234,7 +234,10 @@ MonoBehaviour:
   m_EditorClassIdentifier: 
   initialTarget: {fileID: 1676213961}
   initialFocusDuration: 1.5
-  transitionSpeed: 2
+  positioningCamX: 0
+  positioningCamY: 3.56
+  positioningCamThreshold: 0.5
+  positioningCamSpeed: 5
   target: {fileID: 260423138}
   offset: {x: 0, y: 0, z: -10}
   followSmoothSpeed: 8
@@ -1006,7 +1009,7 @@ PrefabInstance:
     m_Modifications:
     - target: {fileID: 4853612798942597594, guid: d0fb041a0f2af134e8a05509a83f6c56, type: 3}
       propertyPath: m_Name
-      value: Chicken
+      value: Target
       objectReference: {fileID: 0}
     - target: {fileID: 7938654687155789744, guid: d0fb041a0f2af134e8a05509a83f6c56, type: 3}
       propertyPath: m_LocalPosition.x
@@ -1063,7 +1066,7 @@ PrefabInstance:
     m_Modifications:
     - target: {fileID: 635384885701488258, guid: 040f7923ed651ec439d460122232383e, type: 3}
       propertyPath: m_Name
-      value: Fork
+      value: Stick
       objectReference: {fileID: 0}
     - target: {fileID: 1962320810554393372, guid: 040f7923ed651ec439d460122232383e, type: 3}
       propertyPath: m_LocalPosition.x

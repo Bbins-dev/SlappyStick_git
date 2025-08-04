@@ -32,7 +32,7 @@ public class StickMove : MonoBehaviour
     public float torqueMultiplier = 1f;
 
     [Header("UI Settings")]
-    [Tooltip("TMP Text for displaying hold time")]
+    [Tooltip("TMP Text for displaying hold time & messages")]
     public TMP_Text holdTimeTMP;
 
     private Rigidbody2D rb;
@@ -54,7 +54,6 @@ public class StickMove : MonoBehaviour
         startPosition = transform.position;
         startRotation = transform.rotation;
         originalConstraints = rb.constraints;
-        cameraFollow = Camera.main.GetComponent<CameraFollow>();
 
         // positioning 모드 진입: Y이동·회전 동결
         isPositioning = true;
@@ -62,67 +61,94 @@ public class StickMove : MonoBehaviour
 
         if (holdTimeTMP != null)
             holdTimeTMP.gameObject.SetActive(false);
+
+        cameraFollow = Camera.main.GetComponent<CameraFollow>();
+        // 메시지 숨기기
+        HideMessage();
     }
 
     void Update()
     {
-         // 1) positioning 단계: 카메라가 준비된 이후에만 드래그 허용
+        // 1) Initial Camera Sequence: 입력 불가
         if (isPositioning)
         {
-            // 카메라 준비 전이라면 입력 무시
             if (cameraFollow == null || !cameraFollow.IsPositionCamReady)
+            {
+                ShowMessage("Input not available");
                 return;
-
-            // 이제부터 실제 드래그 로직 실행
-            if (Input.GetMouseButton(0))
-            {
-                Vector3 world = Camera.main.ScreenToWorldPoint(Input.mousePosition);
-                float clampedX = Mathf.Clamp(world.x,
-                    startPosition.x - positionRange,
-                    startPosition.x + positionRange);
-                transform.position = new Vector3(clampedX, startPosition.y, startPosition.z);
             }
 
-            if (Input.GetMouseButtonUp(0))
-            {
-                isPositioning = false;
-                rb.constraints = originalConstraints;
-            }
+            // 2) Positioning Phase: 드래그 가능
+            ShowMessage("Drag to position");
+            HandlePositioning();
             return;
         }
 
-        // 2) 이미 발사했거나 카메라 전환 전이라면 입력 무시
-        if (hasLaunched)
-            return;
+        // 3) Positioning 끝난 후, 발사 전까지
+        if (!hasLaunched)
+        {
+            if (!isHolding)
+                ShowMessage("Hold to launch");
 
-        // 3) 클릭 앤 홀드로 발사
+            HandleHoldAndLaunch();
+            return;
+        }
+
+        // 발사 후
+        HideMessage();
+    }
+
+    private void HandlePositioning()
+    {
+        if (Input.GetMouseButton(0))
+        {
+            Vector3 world = Camera.main.ScreenToWorldPoint(Input.mousePosition);
+            float clampedX = Mathf.Clamp(world.x,
+                startPosition.x - positionRange,
+                startPosition.x + positionRange);
+            transform.position = new Vector3(clampedX, startPosition.y, startPosition.z);
+        }
+        if (Input.GetMouseButtonUp(0))
+        {
+            isPositioning = false;
+            rb.constraints = originalConstraints;
+        }
+    }
+
+    private void HandleHoldAndLaunch()
+    {
         if (Input.GetMouseButtonDown(0))
         {
             isHolding = true;
             holdTime = 0f;
-            if (holdTimeTMP != null) holdTimeTMP.gameObject.SetActive(true);
+            ShowMessage(""); // 숫자 출력 준비
         }
-
         if (isHolding)
         {
             holdTime += Time.deltaTime;
             holdTime = Mathf.Clamp(holdTime, 0f, maxHoldTime);
-            if (holdTimeTMP != null)
-                holdTimeTMP.text = $"{holdTime:F2} / {maxHoldTime:F2}";
+            holdTimeTMP.text = $"{holdTime:F2} / {maxHoldTime:F2}";
         }
-
         if (Input.GetMouseButtonUp(0) && isHolding)
         {
             isHolding = false;
             float p = holdTime / maxHoldTime;
             StartCoroutine(LaunchAfterDelay(p));
             hasLaunched = true;
-            if (holdTimeTMP != null)
-            {
-                holdTimeTMP.text = "";
-                holdTimeTMP.gameObject.SetActive(false);
-            }
         }
+    }
+
+    private void ShowMessage(string msg)
+    {
+        if (holdTimeTMP == null) return;
+        holdTimeTMP.gameObject.SetActive(true);
+        holdTimeTMP.text = msg;
+    }
+
+    private void HideMessage()
+    {
+        if (holdTimeTMP == null) return;
+        holdTimeTMP.gameObject.SetActive(false);
     }
 
     private IEnumerator LaunchAfterDelay(float holdPercent)
