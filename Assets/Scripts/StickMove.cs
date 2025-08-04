@@ -45,8 +45,7 @@ public class StickMove : MonoBehaviour
     private bool hasLaunched = false;
     private float holdTime = 0f;
     private CameraFollow cameraFollow;
-    [HideInInspector]
-    public bool IsPositioning => isPositioning;
+    [HideInInspector] public bool IsPositioning => isPositioning;
 
     void Start()
     {
