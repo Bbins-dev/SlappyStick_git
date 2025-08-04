@@ -44,6 +44,9 @@ public class StickMove : MonoBehaviour
     private bool isHolding = false;
     private bool hasLaunched = false;
     private float holdTime = 0f;
+    private CameraFollow cameraFollow;
+    [HideInInspector]
+    public bool IsPositioning => isPositioning;
 
     void Start()
     {
@@ -51,6 +54,7 @@ public class StickMove : MonoBehaviour
         startPosition = transform.position;
         startRotation = transform.rotation;
         originalConstraints = rb.constraints;
+        cameraFollow = Camera.main.GetComponent<CameraFollow>();
 
         // positioning 모드 진입: Y이동·회전 동결
         isPositioning = true;
@@ -62,9 +66,14 @@ public class StickMove : MonoBehaviour
 
     void Update()
     {
-        // 1) positioning 단계: 좌우 드래그만 허용
+         // 1) positioning 단계: 카메라가 준비된 이후에만 드래그 허용
         if (isPositioning)
         {
+            // 카메라 준비 전이라면 입력 무시
+            if (cameraFollow == null || !cameraFollow.IsPositionCamReady)
+                return;
+
+            // 이제부터 실제 드래그 로직 실행
             if (Input.GetMouseButton(0))
             {
                 Vector3 world = Camera.main.ScreenToWorldPoint(Input.mousePosition);
@@ -76,7 +85,6 @@ public class StickMove : MonoBehaviour
 
             if (Input.GetMouseButtonUp(0))
             {
-                // 드래그 해제 시 바로 떨어지도록 물리 재활성화
                 isPositioning = false;
                 rb.constraints = originalConstraints;
             }

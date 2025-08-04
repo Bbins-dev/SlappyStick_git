@@ -8,9 +8,15 @@ public class CameraFollow : MonoBehaviour
     [Tooltip("Seconds to focus on initialTarget before switching")]
     public float initialFocusDuration = 2f;
 
-    [Header("Transition Settings")]
-    [Tooltip("Speed when moving from initialTarget to followTarget")]
-    public float transitionSpeed = 5f;
+    [Header("Positioning Camera Settings")]
+    [Tooltip("X position during stick positioning")]
+    public float positioningCamX = 0f;
+    [Tooltip("Y position during stick positioning")]
+    public float positioningCamY = 3.56f;
+    [Tooltip("Distance threshold to allow stick positioning")]
+    public float positioningCamThreshold = 0.5f;
+    [Tooltip("Speed when moving camera to positioning point")]
+    public float positioningCamSpeed = 5f;
 
     [Header("Follow Settings")]
     [Tooltip("The Transform that the camera will follow afterwards")]
@@ -29,10 +35,14 @@ public class CameraFollow : MonoBehaviour
     public float zoomSmoothSpeed = 5f;
 
     private Camera cam;
-    private float targetStartY;
     private float initialTimer;
-    private bool hasSwitchedToFollow = false;
-    public bool IsSwitchedToFollow => hasSwitchedToFollow;
+    private bool hasReachedPositionCam = false;
+    // 카메라가 positioningCam 위치에 도달했는지 외부에서 읽기 전용으로 공개
+    [HideInInspector] public bool IsPositionCamReady => hasReachedPositionCam;
+    private Vector3 repositionPos;
+    private StickMove stickMove;
+    private float targetStartY;
+    
 
     void Start()
     {
@@ -41,60 +51,59 @@ public class CameraFollow : MonoBehaviour
         cam.orthographicSize = baseOrthographicSize;
 
         initialTimer = initialFocusDuration;
+        repositionPos = new Vector3(positioningCamX, positioningCamY, transform.position.z);
+
+        if (target != null)
+        {
+            stickMove = target.GetComponent<StickMove>();
+            targetStartY = target.position.y;
+        }
     }
 
     void LateUpdate()
     {
-        // 1) Initial focus phase
+        // 1) Initial Focus Phase
         if (initialTimer > 0f)
         {
             if (initialTarget != null)
             {
-                Vector3 desiredPos = new Vector3(
+                Vector3 desired = new Vector3(
                     initialTarget.position.x + offset.x,
                     initialTarget.position.y + offset.y,
-                    transform.position.z
-                );
-                transform.position = Vector3.Lerp(transform.position, desiredPos, followSmoothSpeed * Time.deltaTime);
+                    transform.position.z);
+                transform.position = Vector3.Lerp(transform.position, desired, followSmoothSpeed * Time.deltaTime);
             }
-
             initialTimer -= Time.deltaTime;
             return;
         }
 
-        // 2) Transition to follow target
-        if (!hasSwitchedToFollow)
+        // 2) Move to Positioning Camera Point
+        if (!hasReachedPositionCam)
         {
-            if (target != null)
-            {
-                Vector3 desiredPos = new Vector3(
-                    target.position.x + offset.x,
-                    target.position.y + offset.y,
-                    transform.position.z
-                );
-                transform.position = Vector3.Lerp(transform.position, desiredPos, transitionSpeed * Time.deltaTime);
-
-                if (Vector3.Distance(transform.position, desiredPos) < 0.5f)
-                {
-                    hasSwitchedToFollow = true;
-                    targetStartY = target.position.y;
-                }
-            }
+            transform.position = Vector3.Lerp(transform.position, repositionPos, positioningCamSpeed * Time.deltaTime);
+            if (Vector3.Distance(transform.position, repositionPos) < positioningCamThreshold)
+                hasReachedPositionCam = true;
             return;
         }
 
-        // 3) Regular follow + zoom
+        // 3) While Stick Is Positioning, hold camera static
+        if (stickMove != null && stickMove.IsPositioning)
+        {
+            transform.position = repositionPos;
+            return;
+        }
+
+        // 4) Follow & Zoom after positioning
         if (target == null) return;
 
-        // Follow position
+        // Follow
         Vector3 followPos = new Vector3(
             target.position.x + offset.x,
             target.position.y + offset.y,
-            transform.position.z
-        );
+            transform.position.z);
         transform.position = Vector3.Lerp(transform.position, followPos, followSmoothSpeed * Time.deltaTime);
 
-        // Zoom based on height
+        // Zoom
         float heightDelta = target.position.y - targetStartY;
         float desiredSize = baseOrthographicSize + Mathf.Max(0f, heightDelta) * zoomFactor;
         cam.orthographicSize = Mathf.Lerp(cam.orthographicSize, desiredSize, zoomSmoothSpeed * Time.deltaTime);
