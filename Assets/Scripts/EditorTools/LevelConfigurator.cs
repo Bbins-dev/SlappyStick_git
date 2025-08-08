@@ -159,6 +159,10 @@ public class LevelConfigurator : MonoBehaviour
             tip       = default
         };
 
+        var rb = go.GetComponent<Rigidbody2D>();
+        data.hasRigidbody2D = rb != null;
+        data.rbGravityScale = rb != null ? rb.gravityScale : 0f;
+
         var sr = go.GetComponent<SpriteRenderer>();
         if (sr != null)
         {
@@ -326,7 +330,7 @@ public class LevelConfigurator : MonoBehaviour
             sr.sprite = e.sprite;
             sr.color = (e.color == default ? Color.white : e.color);
             sr.sortingLayerName = e.sortingLayerName;
-            sr.sortingOrder     = e.sortingOrder;
+            sr.sortingOrder = e.sortingOrder;
         }
 
         // Colliders
@@ -345,6 +349,15 @@ public class LevelConfigurator : MonoBehaviour
             tip.layer = root.layer; // Tip도 같은 레이어 사용
             AddColliderEditor(tip, e.tip.collider);
             Undo.AddComponent<GeneratedFlag>(tip);
+        }
+        
+        if (type == SpawnMarker.SpawnType.Obstacle && e.hasRigidbody2D)
+        {
+            var rb = Undo.AddComponent<Rigidbody2D>(root);
+            rb.bodyType = RigidbodyType2D.Dynamic;
+            rb.collisionDetectionMode = CollisionDetectionMode2D.Continuous;
+            rb.interpolation = RigidbodyInterpolation2D.Interpolate;
+            rb.gravityScale = e.rbGravityScale;
         }
     }
 

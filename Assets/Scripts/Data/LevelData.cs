@@ -66,6 +66,10 @@ public class LevelData : ScriptableObject
         [Header("Physics")]
         public Collider2DData[] colliders; // all colliders on the root
 
+        [Header("Rigidbody (optional)")]
+        public bool hasRigidbody2D;
+        public float rbGravityScale;
+
         [Header("Stick only")]
         public TipData tip;          // optional child tip collider
     }

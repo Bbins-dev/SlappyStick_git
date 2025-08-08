@@ -194,6 +194,13 @@ public class StickMove : MonoBehaviour
 
         // 발사 상태 초기화
         hasLaunched = false;
+
+        // 장애물 리셋 브로드캐스트
+        ResetBus.Raise();
+        Debug.Log("[StickMove] ResetBus.Raise()");
+
+        // ★ 추가: 매니저를 통한 강제 리셋
+        FindObjectOfType<LevelManager>()?.ResetObstacles();
     }
 
     private void TryBindUI()

@@ -1,8 +1,10 @@
 // Assets/Scripts/Managers/LevelManager.cs
 using UnityEngine;
+using System.Collections.Generic;
 
 public class LevelManager : MonoBehaviour
 {
+
     [Header("Editor Override (MakingScene)")]
     [Tooltip("When playing in the editor, use this LevelData instead of GameManager/Database.")]
     public bool useEditorOverride = true;
@@ -11,18 +13,19 @@ public class LevelManager : MonoBehaviour
     [Header("Parent for spawned objects")]
     public Transform dynamicRoot;
 
+    private readonly List<Resettable2D> obstacleResets = new List<Resettable2D>();
     private void Start()
     {
-            LevelData data = null;
+        LevelData data = null;
 
-    #if UNITY_EDITOR
+#if UNITY_EDITOR
         if (useEditorOverride && editorOverrideLevel != null)
         {
             data = editorOverrideLevel;
             Debug.Log($"[LevelManager] Using editorOverrideLevel: {data.name}");
         }
         else
-    #endif
+#endif
         {
             var gm = GameManager.Instance;
             var db = gm != null ? gm.Database : null;
@@ -58,14 +61,23 @@ public class LevelManager : MonoBehaviour
         {
             foreach (var t in data.targets)
             {
-                var go = BuildEntity(t, false);
+                var go = BuildEntity(t, isStick: false, isObstacle: false);
                 if (firstTarget == null) firstTarget = go.transform;
             }
         }
 
         // 3) Obstacles / Fulcrums
-        if (data.obstacles != null) foreach (var o in data.obstacles) BuildEntity(o, false);
-        if (data.fulcrums  != null) foreach (var f in data.fulcrums)  BuildEntity(f, false);
+        if (data.obstacles != null)
+        {
+            foreach (var o in data.obstacles)
+                BuildEntity(o, isStick: false, isObstacle: true);  // ★ 반드시 true
+        }
+
+        if (data.fulcrums != null)
+        {
+            foreach (var f in data.fulcrums)
+                BuildEntity(f, isStick: false, isObstacle: false);
+        }
 
         // 4) 카메라에 "초기 포커스=첫 타겟, 팔로우=스틱" 전달
         var camFollow = Camera.main ? Camera.main.GetComponent<CameraFollow>() : null;
@@ -79,50 +91,83 @@ public class LevelManager : MonoBehaviour
         }
 
         Debug.Log("[LevelManager] Build complete.");
-        }
-        
-        private GameObject BuildEntity(LevelData.EntityData e, bool isStick)
+    }
+
+    private GameObject BuildEntity(LevelData.EntityData e, bool isStick, bool isObstacle = false)
+    {
+        var go = new GameObject(string.IsNullOrEmpty(e.name) ? (isStick ? "Stick" : "Entity") : e.name);
+        go.transform.SetParent(dynamicRoot, false);
+        go.transform.position = e.position;
+        go.transform.rotation = Quaternion.Euler(0, 0, e.rotationZ);
+        go.transform.localScale = new Vector3(e.scale.x, e.scale.y, 1f);
+        go.layer = e.layer;
+        go.layer = Mathf.Clamp(e.layer, 0, 31);
+
+        if (!string.IsNullOrEmpty(e.tag))
         {
-            var go = new GameObject(string.IsNullOrEmpty(e.name) ? (isStick ? "Stick" : "Entity") : e.name);
-            go.transform.SetParent(dynamicRoot, false);
-            go.transform.position = e.position;
-            go.transform.rotation = Quaternion.Euler(0, 0, e.rotationZ);
-            go.transform.localScale = new Vector3(e.scale.x, e.scale.y, 1f);
-            go.layer = e.layer;
-            go.layer = Mathf.Clamp(e.layer, 0, 31);
+            try { go.tag = e.tag; } catch { /* tag 미등록이면 무시 */ }
+        }
 
-            if (!string.IsNullOrEmpty(e.tag))
-            {
-                try { go.tag = e.tag; } catch { /* tag 미등록이면 무시 */ }
-            }
-
-            if (e.sprite != null)
-            {
-                var sr = go.AddComponent<SpriteRenderer>();
-                sr.sprite = e.sprite;
-                sr.color = (e.color == default ? Color.white : e.color);
-                if (!string.IsNullOrEmpty(e.sortingLayerName))
+        if (e.sprite != null)
+        {
+            var sr = go.AddComponent<SpriteRenderer>();
+            sr.sprite = e.sprite;
+            sr.color = (e.color == default ? Color.white : e.color);
+            if (!string.IsNullOrEmpty(e.sortingLayerName))
                 sr.sortingLayerName = e.sortingLayerName;
-                sr.sortingOrder = e.sortingOrder;
+            sr.sortingOrder = e.sortingOrder;
+        }
+
+        if (e.colliders != null)
+        {
+            foreach (var c in e.colliders)
+                AddCollider(go, c); // ← 기존 AddCollider 메서드 그대로 사용
+        }
+
+        // Tip
+        if (isStick && e.tip.collider.kind != LevelData.ColliderKind.None)
+        {
+            var tip = new GameObject("Tip");
+            tip.layer = e.layer; // Tip도 같은 레이어 사용
+            tip.transform.SetParent(go.transform, false);
+            tip.transform.localPosition = e.tip.localPosition;
+            tip.transform.localRotation = Quaternion.Euler(0, 0, e.tip.localRotationZ);
+            tip.layer = go.layer;
+            AddCollider(tip, e.tip.collider);
+        }
+
+        // --- Obstacle handling (Rigidbody + Reset registration) ---
+        if (isObstacle)
+        {
+            // 1) Decide whether this obstacle should have a Rigidbody2D
+            bool wantRb = e.hasRigidbody2D;
+
+            // (선택) 레이어로 강제 Dynamic 처리하고 싶다면: obstacleDynamicLayer 사용
+            // wantRb |= (obstacleDynamicLayer >= 0 && e.layer == obstacleDynamicLayer);
+
+            // 2) Get-or-Add Rigidbody2D (Dynamic / Continuous)
+            if (wantRb)
+            {
+                var rb = go.GetComponent<Rigidbody2D>();
+                if (rb == null) rb = go.AddComponent<Rigidbody2D>();
+                rb.bodyType = RigidbodyType2D.Dynamic;
+                rb.collisionDetectionMode = CollisionDetectionMode2D.Continuous;
+                rb.interpolation = RigidbodyInterpolation2D.Interpolate;
+
+                // 저장값이 있으면 그대로, 없으면 기본값(예: 1f) 지정
+                rb.gravityScale = (e.hasRigidbody2D ? e.rbGravityScale :
+                                (Mathf.Approximately(e.rbGravityScale, 0f) ? 1f : e.rbGravityScale));
             }
 
-            if (e.colliders != null)
-            {
-                foreach (var c in e.colliders)
-                    AddCollider(go, c); // ← 기존 AddCollider 메서드 그대로 사용
-            }
+            // 3) Get-or-Add Resettable2D (초기 상태 캡처 → 이벤트/강제 리셋 대응)
+            var reset = go.GetComponent<Resettable2D>();
+            if (reset == null) reset = go.AddComponent<Resettable2D>();
 
-            // Tip
-            if (isStick && e.tip.collider.kind != LevelData.ColliderKind.None)
-            {
-                var tip = new GameObject("Tip");
-                tip.layer = e.layer; // Tip도 같은 레이어 사용
-                tip.transform.SetParent(go.transform, false);
-                tip.transform.localPosition = e.tip.localPosition;
-                tip.transform.localRotation = Quaternion.Euler(0, 0, e.tip.localRotationZ);
-                tip.layer = go.layer;
-                AddCollider(tip, e.tip.collider);
-            }
+            // 4) Register for manager-wide reset
+            if (obstacleResets != null) obstacleResets.Add(reset);
+        }
+
+
 
         // 👇 런타임용 최소 보정(Stick만)
         PostBuildRuntimeTuning(go, isStick);
@@ -215,4 +260,17 @@ public class LevelManager : MonoBehaviour
                 break;
         }
     }
+    
+    public void ResetObstacles()
+    {
+        int count = 0;
+        foreach (var r in obstacleResets)
+        {
+            if (r == null) continue;
+            r.ResetNow();
+            count++;
+        }
+        Debug.Log($"[LevelManager] ResetObstacles invoked: {count} items.");
+    }
+
 }
