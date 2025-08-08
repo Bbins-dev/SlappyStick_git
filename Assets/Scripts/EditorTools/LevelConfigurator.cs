@@ -149,6 +149,7 @@ public class LevelConfigurator : MonoBehaviour
         {
             name      = go.name,
             tag       = go.tag,
+            layer     = go.layer,
             position  = tr.position,
             rotationZ = tr.eulerAngles.z,
             scale     = tr.localScale,
@@ -162,7 +163,9 @@ public class LevelConfigurator : MonoBehaviour
         if (sr != null)
         {
             data.sprite = sr.sprite;
-            data.color  = sr.color;
+            data.color = sr.color;
+            data.sortingLayerName = sr.sortingLayerName;
+            data.sortingOrder     = sr.sortingOrder;
         }
 
         if (isStick)
@@ -303,6 +306,7 @@ public class LevelConfigurator : MonoBehaviour
         root.transform.position = e.position;
         root.transform.rotation = Quaternion.Euler(0, 0, e.rotationZ);
         root.transform.localScale = new Vector3(e.scale.x, e.scale.y, 1f);
+        root.layer = e.layer;
 
         // Tag (safe assign)
         if (!string.IsNullOrEmpty(e.tag))
@@ -320,7 +324,9 @@ public class LevelConfigurator : MonoBehaviour
         {
             var sr = Undo.AddComponent<SpriteRenderer>(root);
             sr.sprite = e.sprite;
-            sr.color  = (e.color == default ? Color.white : e.color);
+            sr.color = (e.color == default ? Color.white : e.color);
+            sr.sortingLayerName = e.sortingLayerName;
+            sr.sortingOrder     = e.sortingOrder;
         }
 
         // Colliders
@@ -336,6 +342,7 @@ public class LevelConfigurator : MonoBehaviour
             tip.transform.SetParent(root.transform, false);
             tip.transform.localPosition = e.tip.localPosition;
             tip.transform.localRotation = Quaternion.Euler(0, 0, e.tip.localRotationZ);
+            tip.layer = root.layer; // Tip도 같은 레이어 사용
             AddColliderEditor(tip, e.tip.collider);
             Undo.AddComponent<GeneratedFlag>(tip);
         }

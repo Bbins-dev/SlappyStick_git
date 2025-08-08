@@ -50,6 +50,7 @@ public class LevelData : ScriptableObject
         [Header("Identity")]
         public string name;          // optional label
         public string tag;           // optional; must exist in Tag Manager
+        public int layer;
 
         [Header("Transform")]
         public Vector2 position;     // world pos for root entity
@@ -59,6 +60,8 @@ public class LevelData : ScriptableObject
         [Header("Visual")]
         public Sprite sprite;        // SpriteRenderer.sprite
         public Color color;          // SpriteRenderer.color
+        public string sortingLayerName;
+        public int sortingOrder;
 
         [Header("Physics")]
         public Collider2DData[] colliders; // all colliders on the root

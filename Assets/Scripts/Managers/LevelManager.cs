@@ -64,6 +64,8 @@ public class LevelManager : MonoBehaviour
         go.transform.position = e.position;
         go.transform.rotation = Quaternion.Euler(0, 0, e.rotationZ);
         go.transform.localScale = new Vector3(e.scale.x, e.scale.y, 1f);
+        go.layer = e.layer;
+        go.layer = Mathf.Clamp(e.layer, 0, 31);
 
         if (!string.IsNullOrEmpty(e.tag))
         {
@@ -75,6 +77,9 @@ public class LevelManager : MonoBehaviour
             var sr = go.AddComponent<SpriteRenderer>();
             sr.sprite = e.sprite;
             sr.color = (e.color == default ? Color.white : e.color);
+            if (!string.IsNullOrEmpty(e.sortingLayerName))
+            sr.sortingLayerName = e.sortingLayerName;
+            sr.sortingOrder = e.sortingOrder;
         }
 
         if (e.colliders != null)
@@ -87,9 +92,11 @@ public class LevelManager : MonoBehaviour
         if (isStick && e.tip.collider.kind != LevelData.ColliderKind.None)
         {
             var tip = new GameObject("Tip");
+            tip.layer = e.layer; // Tip도 같은 레이어 사용
             tip.transform.SetParent(go.transform, false);
             tip.transform.localPosition = e.tip.localPosition;
             tip.transform.localRotation = Quaternion.Euler(0, 0, e.tip.localRotationZ);
+            tip.layer = go.layer;
             AddCollider(tip, e.tip.collider);
         }
 
