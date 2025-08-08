@@ -35,6 +35,15 @@ public class StickMove : MonoBehaviour
     [Tooltip("TMP Text for displaying hold time & messages")]
     public TMP_Text holdTimeTMP;
 
+    [Header("Auto Reset On Obstacle Idle")]
+    [Tooltip("Seconds to wait on obstacle before resetting")]
+    public float idleOnObstacleSeconds = 1f;          // ← 퍼블릭으로 조절 가능
+    [Tooltip("Linear speed under which the stick is considered idle (m/s)")]
+    public float idleSpeedThreshold = 0.05f;
+    [Tooltip("Angular speed under which the stick is considered idle (deg/s)")]
+    public float idleAngularSpeedThreshold = 5f;
+
+
     private Rigidbody2D rb;
     private Vector3 startPosition;
     private Quaternion startRotation;
@@ -45,6 +54,9 @@ public class StickMove : MonoBehaviour
     private bool hasLaunched = false;
     private float holdTime = 0f;
     private CameraFollow cameraFollow;
+    private int obstacleContacts = 0; // 현재 Obstacle과의 접촉 수
+    private float obstacleIdleTimer = 0f;
+
     [HideInInspector] public bool IsPositioning => isPositioning;
 
     void Start()
@@ -103,6 +115,13 @@ public class StickMove : MonoBehaviour
 
         // 발사 후
         HideMessage();
+    }
+
+    void FixedUpdate()
+    {
+        // 발사 후 & 포지셔닝이 끝난 상태에서만 체크
+        if (hasLaunched && !isPositioning)
+            CheckIdleOnObstacle();
     }
 
     private void HandlePositioning()
@@ -172,12 +191,31 @@ public class StickMove : MonoBehaviour
     {
         if (c.CompareTag("Respawn"))
             ResetStick();
+
+        if (c.CompareTag("Obstacle"))
+        obstacleContacts++;
     }
 
     private void OnCollisionEnter2D(Collision2D c)
     {
         if (c.collider.CompareTag("Respawn"))
             ResetStick();
+
+        if (c.collider.CompareTag("Obstacle"))
+        obstacleContacts++;
+    }
+
+    
+    private void OnCollisionExit2D(Collision2D c)
+    {
+        if (c.collider.CompareTag("Obstacle"))
+            obstacleContacts = Mathf.Max(0, obstacleContacts - 1);
+    }
+
+    private void OnTriggerExit2D(Collider2D c)
+    {
+        if (c.CompareTag("Obstacle"))
+            obstacleContacts = Mathf.Max(0, obstacleContacts - 1);
     }
 
     private void ResetStick()
@@ -229,6 +267,29 @@ public class StickMove : MonoBehaviour
             if (holdTimeTMP != null) yield break;
             t += Time.unscaledDeltaTime;
             yield return null; // wait next frame until UI scene finishes loading
+        }
+    }
+
+    private void CheckIdleOnObstacle()
+    {
+        // Obstacle과 맞닿아 있고 속도가 매우 낮으면 타이머 증가
+        bool touchingObstacle = obstacleContacts > 0;
+        bool linearIdle  = rb.velocity.sqrMagnitude <= (idleSpeedThreshold * idleSpeedThreshold);
+        bool angularIdle = Mathf.Abs(rb.angularVelocity) <= idleAngularSpeedThreshold;
+
+        if (touchingObstacle && linearIdle && angularIdle)
+        {
+            obstacleIdleTimer += Time.fixedDeltaTime;
+            if (obstacleIdleTimer >= idleOnObstacleSeconds)
+            {
+                // 리셋 실행
+                obstacleIdleTimer = 0f;
+                ResetStick(); // ← 네가 이미 쓰는 리셋 로직 (ResetBus, LM.ResetObstacles 포함)
+            }
+        }
+        else
+        {
+            obstacleIdleTimer = 0f;
         }
     }
 }
