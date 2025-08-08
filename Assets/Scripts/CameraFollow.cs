@@ -42,13 +42,16 @@ public class CameraFollow : MonoBehaviour
     private Vector3 repositionPos;
     private StickMove stickMove;
     private float targetStartY;
-    
+
 
     void Start()
     {
         cam = Camera.main;
+        if (cam == null) cam = GetComponent<Camera>();
         cam.orthographic = true;
         cam.orthographicSize = baseOrthographicSize;
+
+        if (target == null) TryAutoBindTargets();
 
         initialTimer = initialFocusDuration;
         repositionPos = new Vector3(positioningCamX, positioningCamY, transform.position.z);
@@ -62,6 +65,8 @@ public class CameraFollow : MonoBehaviour
 
     void LateUpdate()
     {
+        if (target == null) TryAutoBindTargets();
+
         // 1) Initial Focus Phase
         if (initialTimer > 0f)
         {
@@ -107,5 +112,34 @@ public class CameraFollow : MonoBehaviour
         float heightDelta = target.position.y - targetStartY;
         float desiredSize = baseOrthographicSize + Mathf.Max(0f, heightDelta) * zoomFactor;
         cam.orthographicSize = Mathf.Lerp(cam.orthographicSize, desiredSize, zoomSmoothSpeed * Time.deltaTime);
+    }
+
+    public void SetFollowTarget(Transform t, bool resetTimers = true)
+    {
+        target = t;
+        stickMove = t ? t.GetComponent<StickMove>() : null;
+        if (t) targetStartY = t.position.y;
+
+        if (resetTimers)
+        {
+            hasReachedPositionCam = false;
+            initialTimer = initialFocusDuration;
+        }
+
+        // 초기 포커스 대상이 비어있다면 Stick으로
+        if (initialTarget == null) initialTarget = t;
+    }
+
+    private void TryAutoBindTargets()
+    {
+        if (target != null) return;
+        var sm = FindObjectOfType<StickMove>();
+        if (sm != null) SetFollowTarget(sm.transform, resetTimers: true);
+    }
+    
+    public void ConfigureTargets(Transform initial, Transform follow, bool resetTimers = true)
+    {
+        initialTarget = initial;               // 1) 먼저 초기 포커스 대상 지정 (예: 첫 번째 Target)
+        SetFollowTarget(follow, resetTimers);  // 2) 그 다음 스틱을 팔로우 대상으로
     }
 }

@@ -54,6 +54,11 @@ public class StickMove : MonoBehaviour
         startRotation = transform.rotation;
         originalConstraints = rb.constraints;
 
+        // 🔽 Add: try bind UI right away; if not ready yet, wait a bit.
+        TryBindUI();
+        if (holdTimeTMP == null)
+            StartCoroutine(WaitAndBindUI());
+
         // positioning 모드 진입: Y이동·회전 동결
         isPositioning = true;
         rb.constraints = RigidbodyConstraints2D.FreezePositionY | RigidbodyConstraints2D.FreezeRotation;
@@ -68,6 +73,9 @@ public class StickMove : MonoBehaviour
 
     void Update()
     {
+
+        if (holdTimeTMP == null) TryBindUI();
+
         // 1) Initial Camera Sequence: 입력 불가
         if (isPositioning)
         {
@@ -126,7 +134,7 @@ public class StickMove : MonoBehaviour
         {
             holdTime += Time.deltaTime;
             holdTime = Mathf.Clamp(holdTime, 0f, maxHoldTime);
-            holdTimeTMP.text = $"{holdTime:F2} / {maxHoldTime:F2}";
+            SetHoldText($"{holdTime:F2} / {maxHoldTime:F2}");
         }
         if (Input.GetMouseButtonUp(0) && isHolding)
         {
@@ -139,6 +147,7 @@ public class StickMove : MonoBehaviour
 
     private void ShowMessage(string msg)
     {
+        if (holdTimeTMP == null) TryBindUI();
         if (holdTimeTMP == null) return;
         holdTimeTMP.gameObject.SetActive(true);
         holdTimeTMP.text = msg;
@@ -185,5 +194,34 @@ public class StickMove : MonoBehaviour
 
         // 발사 상태 초기화
         hasLaunched = false;
+    }
+
+    private void TryBindUI()
+    {
+        if (holdTimeTMP != null) return;
+        if (UIRoot.Instance != null && UIRoot.Instance.holdTimeText != null)
+            holdTimeTMP = UIRoot.Instance.holdTimeText;
+    }
+
+    private void SetHoldText(string s)
+    {
+        // lazy bind
+        if (holdTimeTMP == null) TryBindUI();
+        if (holdTimeTMP == null) return; // 여전히 없으면 그냥 패스
+
+        holdTimeTMP.gameObject.SetActive(true);
+        holdTimeTMP.text = s;
+    }
+
+    private IEnumerator WaitAndBindUI()
+    {
+        float t = 0f, timeout = 2f;
+        while (holdTimeTMP == null && t < timeout)
+        {
+            TryBindUI();
+            if (holdTimeTMP != null) yield break;
+            t += Time.unscaledDeltaTime;
+            yield return null; // wait next frame until UI scene finishes loading
+        }
     }
 }
