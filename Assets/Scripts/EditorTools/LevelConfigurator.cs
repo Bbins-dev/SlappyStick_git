@@ -13,7 +13,8 @@ using UnityEditor.SceneManagement;
 /// </summary>
 public class LevelConfigurator : MonoBehaviour
 {
-    public enum ClearMode { GeneratedOnly, AllChildren }
+    
+    public enum ClearMode { GeneratedOnly, AllChildren, None }
 
     [Header("Load Settings")]
     public ClearMode clearModeOnLoad = ClearMode.GeneratedOnly;
@@ -27,6 +28,13 @@ public class LevelConfigurator : MonoBehaviour
     public Transform obstaclesRoot;
     public Transform fulcrumsRoot;
 
+    [Header("Preview Groups (Editor)")]
+    [Tooltip("All preview groups are created under this container")]
+    public Transform previewContainer;
+    [Tooltip("Last loaded group; Save uses this first")]
+    public Transform currentGroup;
+
+
 #if UNITY_EDITOR
     // ---------- Context Menus ----------
     [ContextMenu("Save To LevelData")]
@@ -38,42 +46,70 @@ public class LevelConfigurator : MonoBehaviour
             return;
         }
 
-        // Stick (single): prefer explicit root; else find by marker
-        GameObject stickGo = ResolveStickForSave();
+        // group 우선 부모 잡기
+        Transform gStick = null, gTargets = null, gObstacles = null, gFulcrums = null;
+        if (currentGroup != null)
+        {
+            gStick     = currentGroup.Find("__Preview_Stick");
+            gTargets   = currentGroup.Find("__Preview_Targets");
+            gObstacles = currentGroup.Find("__Preview_Obstacles");
+            gFulcrums  = currentGroup.Find("__Preview_Fulcrums");
+        }
+
+        // Stick (single)
+        GameObject stickGo = null;
+        if (gStick != null && gStick.childCount > 0)
+            stickGo = gStick.GetChild(0).gameObject;              // >>> group 우선
+        else
+            stickGo = ResolveStickForSave();                       // 기존 폴백
         levelData.stick = stickGo != null ? CaptureEntity(stickGo, isStick: true) : default;
 
-        // Groups
-        levelData.targets   = CaptureGroupForSave(targetsRoot,   SpawnMarker.SpawnType.Target);
-        levelData.obstacles = CaptureGroupForSave(obstaclesRoot, SpawnMarker.SpawnType.Obstacle);
-        levelData.fulcrums  = CaptureGroupForSave(fulcrumsRoot,  SpawnMarker.SpawnType.Fulcrum);
+        // Groups (group 우선 → 없으면 기존 root/marker)
+        levelData.targets   = CaptureGroupForSave(gTargets   != null ? gTargets   : targetsRoot,   SpawnMarker.SpawnType.Target);
+        levelData.obstacles = CaptureGroupForSave(gObstacles != null ? gObstacles : obstaclesRoot, SpawnMarker.SpawnType.Obstacle);
+        levelData.fulcrums  = CaptureGroupForSave(gFulcrums  != null ? gFulcrums  : fulcrumsRoot,  SpawnMarker.SpawnType.Fulcrum);
 
         EditorUtility.SetDirty(levelData);
         AssetDatabase.SaveAssets();
-        Debug.Log($"[LevelConfigurator] Saved scene to LevelData: {levelData.name}");
+        Debug.Log($"[LevelConfigurator] Saved from {(currentGroup ? currentGroup.name : "scene roots")} to LevelData: {levelData.name}");
     }
 
     [ContextMenu("Load From LevelData (Edit)")]
     public void LoadFromLevelData()
     {
+        
+    #if UNITY_EDITOR
+        // ensure we are NOT selecting a preview object that will be destroyed
+        Selection.activeObject = this.gameObject;
+    #endif
+    
         if (levelData == null)
         {
             Debug.LogError("[LevelConfigurator] LevelData asset is not assigned.");
             return;
         }
 
-        // Prepare preview roots (explicit or auto)
-        var stickParent    = EnsurePreviewRoot("__Preview_Stick",    stickRoot);
-        var targetsParent  = EnsurePreviewRoot("__Preview_Targets",  targetsRoot);
-        var obstaclesParent= EnsurePreviewRoot("__Preview_Obstacles",obstaclesRoot);
-        var fulcrumsParent = EnsurePreviewRoot("__Preview_Fulcrums", fulcrumsRoot);
+        // (A) 그룹 컨테이너 확보
+        var container = EnsureContainer();
 
-        // Clear existing generated children
-        ClearByMode(stickParent,     clearModeOnLoad);
-        ClearByMode(targetsParent,   clearModeOnLoad);
-        ClearByMode(obstaclesParent, clearModeOnLoad);
-        ClearByMode(fulcrumsParent,  clearModeOnLoad);
+        // (B) Clear 단계: None이면 스킵, 그 외엔 컨테이너에서 수행
+        if (clearModeOnLoad != ClearMode.None)
+            ClearByMode(container, clearModeOnLoad);
 
-        // Spawn from data
+        // (C) 새 그룹 생성
+        string groupName = $"__PreviewGroup_{levelData.name}";
+        var groupGO = new GameObject(groupName);
+        Undo.RegisterCreatedObjectUndo(groupGO, "Create Preview Group");
+        groupGO.transform.SetParent(container, false);
+        currentGroup = groupGO.transform; // Save에서 사용할 그룹
+
+        // (D) 그룹 하위에 타입별 루트 생성
+        var stickParent      = EnsurePreviewRoot(currentGroup, "__Preview_Stick");
+        var targetsParent    = EnsurePreviewRoot(currentGroup, "__Preview_Targets");
+        var obstaclesParent  = EnsurePreviewRoot(currentGroup, "__Preview_Obstacles");
+        var fulcrumsParent   = EnsurePreviewRoot(currentGroup, "__Preview_Fulcrums");
+
+        // (E) 스폰
         if (levelData.stick.sprite != null || levelData.stick.colliders != null)
             BuildEntityEditor(levelData.stick, SpawnMarker.SpawnType.Stick, stickParent, isStick:true);
 
@@ -90,8 +126,9 @@ public class LevelConfigurator : MonoBehaviour
                 BuildEntityEditor(e, SpawnMarker.SpawnType.Fulcrum, fulcrumsParent, isStick:false);
 
         EditorSceneManager.MarkSceneDirty(gameObject.scene);
-        Debug.Log($"[LevelConfigurator] Loaded LevelData into scene preview: {levelData.name}");
+        Debug.Log($"[LevelConfigurator] Loaded LevelData into new group: {groupName}");
     }
+
 
     [ContextMenu("Clear Preview (Generated Only)")]
     public void ClearPreview()
@@ -103,6 +140,61 @@ public class LevelConfigurator : MonoBehaviour
         EditorSceneManager.MarkSceneDirty(gameObject.scene);
     }
 #endif // UNITY_EDITOR
+
+#if UNITY_EDITOR
+    private void DeselectIfUnder(Transform root)
+    {
+        if (!root) return;
+        foreach (var o in Selection.objects)
+        {
+            var go = o as GameObject;
+            if (!go) continue;
+            var t = go.transform;
+            if (t == root || t.IsChildOf(root))
+            {
+                Selection.objects = new Object[0];
+                break;
+            }
+        }
+    }
+
+    private void SafeUndoDestroy(Object obj)
+    {
+        if (obj != null) Undo.DestroyObjectImmediate(obj);
+    }
+#endif
+
+#if UNITY_EDITOR
+    // === GROUP HELPERS ===
+    private Transform EnsureContainer()
+    {
+        if (previewContainer != null) return previewContainer;
+        var t = transform.Find("__PreviewContainer");
+        if (t == null)
+        {
+            var go = new GameObject("__PreviewContainer");
+            Undo.RegisterCreatedObjectUndo(go, "Create Preview Container");
+            go.transform.SetParent(transform, false);
+            t = go.transform;
+        }
+        previewContainer = t;
+        return previewContainer;
+    }
+
+    private Transform EnsurePreviewRoot(Transform parent, string name) // overload
+    {
+        var t = parent.Find(name);
+        if (t == null)
+        {
+            var go = new GameObject(name);
+            Undo.RegisterCreatedObjectUndo(go, "Create Preview Root");
+            go.transform.SetParent(parent, false);
+            t = go.transform;
+        }
+        return t;
+    }
+#endif
+
 
     // =====================================================================
     // =========================== SAVE HELPERS =============================
