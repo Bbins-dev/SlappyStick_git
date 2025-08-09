@@ -1,5 +1,8 @@
 // GameManager.cs
 using UnityEngine;
+#if UNITY_EDITOR
+using UnityEditor;
+#endif
 
 public class GameManager : MonoBehaviour
 {
@@ -41,5 +44,23 @@ public class GameManager : MonoBehaviour
     private void LoadProgress()
     {
         highestUnlockedLevel = PlayerPrefs.GetInt("HighestUnlocked", 1);
+    }
+
+    [ContextMenu("Reset Progress (Clear PlayerPrefs)")]
+    public void ResetProgress()
+    {
+        // 개별 클리어 기록 삭제
+        for (int i = 1; i <= TotalLevels; i++)
+            PlayerPrefs.DeleteKey($"LevelCleared_{i}");
+
+        // 최고 해금 레벨 삭제
+        PlayerPrefs.DeleteKey("HighestUnlocked");
+
+        // 메모리 상태도 초기화
+        highestUnlockedLevel = 1;
+        CurrentLevel = 1;
+
+        PlayerPrefs.Save();
+        Debug.Log("[GameManager] Progress reset.");
     }
 }

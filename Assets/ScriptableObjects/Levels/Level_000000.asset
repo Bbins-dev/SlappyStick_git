@@ -47,14 +47,14 @@ MonoBehaviour:
         paths:
         - points:
           - {x: 0, y: 0.5773587}
-          - {x: -0.5, y: -0.28866667}
-          - {x: 0.5, y: -0.28866667}
+          - {x: -0.17937708, y: -0.33787024}
+          - {x: 0.18678057, y: -0.3401071}
         edgePoints: []
   targets:
   - name: Target
     tag: Target
     layer: 7
-    position: {x: 30.21, y: 1.4799995}
+    position: {x: 30.21, y: 1.7484064}
     rotationZ: 0
     scale: {x: 0.63, y: 0.63}
     sprite: {fileID: 21300000, guid: ac07485b6f677fb4288d6ab434483c0d, type: 3}
@@ -88,7 +88,7 @@ MonoBehaviour:
   - name: Obstacle
     tag: Obstacle
     layer: 8
-    position: {x: 4.7189283, y: 2.1584063}
+    position: {x: 7.5589285, y: 2.1384058}
     rotationZ: 0
     scale: {x: 0.47999996, y: 0.47999996}
     sprite: {fileID: 21300000, guid: d2ba911d1d4d6f44c9939516ba732d45, type: 3}
@@ -96,26 +96,14 @@ MonoBehaviour:
     sortingLayerName: Default
     sortingOrder: 0
     colliders:
-    - kind: 5
+    - kind: 3
       isTrigger: 0
-      offset: {x: 0, y: 0}
-      size: {x: 0, y: 0}
+      offset: {x: 0, y: 0.04653186}
+      size: {x: 2.1622515, y: 8.103448}
       radius: 0
       capsuleDirection: 0
       paths: []
-      edgePoints:
-      - {x: -0.6199461, y: 4.0044703}
-      - {x: 0.53786993, y: 4.025567}
-      - {x: 0.70724255, y: 1.6176783}
-      - {x: 1.2807127, y: 0.9350569}
-      - {x: 1.2516018, y: -0.6738613}
-      - {x: 1.1974727, y: -3.665648}
-      - {x: 0.845726, y: -3.9485745}
-      - {x: -0.8496389, y: -3.9521751}
-      - {x: -1.2112225, y: -3.7381198}
-      - {x: -1.230616, y: 0.8236742}
-      - {x: -0.70032525, y: 1.541715}
-      - {x: -0.5867462, y: 3.995101}
+      edgePoints: []
     hasRigidbody2D: 1
     rbGravityScale: 1
     tip:

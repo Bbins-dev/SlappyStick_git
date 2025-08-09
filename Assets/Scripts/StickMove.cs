@@ -168,6 +168,8 @@ public class StickMove : MonoBehaviour
     {
         if (holdTimeTMP == null) TryBindUI();
         if (holdTimeTMP == null) return;
+        // HUD가 꺼져 있으면 켠다
+        if (UIRoot.Instance != null) UIRoot.Instance.EnsureHUDVisible();
         holdTimeTMP.gameObject.SetActive(true);
         holdTimeTMP.text = msg;
     }
