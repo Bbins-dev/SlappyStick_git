@@ -6,18 +6,29 @@ public class UIRoot : MonoBehaviour
     public static UIRoot Instance { get; private set; }
 
     [Header("References")]
-    public GameObject hudRoot;        // ← HUD 오브젝트 드래그
-    public TMP_Text holdTimeText;     // ← HoldTimeText 드래그
+    public GameObject hudRoot;
+    public TMP_Text holdTimeText;
 
-    void Awake() { Instance = this; }
+    [Header("Popups")]
+    public ClearPopupController clearPopup;
 
-    // 안전: 이름으로도 한 번 더 찾아보기(드래그 빠졌을 때 대비)
-    void OnEnable()
+    private void Awake()
+    {
+        // singleton guard
+        if (Instance != null && Instance != this) { Destroy(gameObject); return; }
+        Instance = this;
+    }
+
+    private void OnEnable()
     {
         if (holdTimeText == null)
             holdTimeText = transform.Find("HUD/HoldTimeText")?.GetComponent<TMP_Text>();
         if (hudRoot == null)
             hudRoot = transform.Find("HUD")?.gameObject;
+
+        // lazy find for popup
+        if (clearPopup == null)
+            clearPopup = transform.Find("ClearPopup")?.GetComponent<ClearPopupController>();
     }
 
     public void EnsureHUDVisible()
@@ -25,4 +36,7 @@ public class UIRoot : MonoBehaviour
         if (hudRoot && !hudRoot.activeSelf) hudRoot.SetActive(true);
         if (holdTimeText && !holdTimeText.gameObject.activeSelf) holdTimeText.gameObject.SetActive(true);
     }
+
+    public void ShowClearPopup() { if (clearPopup) clearPopup.Show(); }
+    public void HideClearPopup() { if (clearPopup) clearPopup.Hide(); }
 }

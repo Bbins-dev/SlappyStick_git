@@ -13,7 +13,7 @@ GameObject:
   - component: {fileID: 1113589699507112133}
   m_Layer: 0
   m_Name: Floor
-  m_TagString: Respawn
+  m_TagString: Floor
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
   m_StaticEditorFlags: 0
@@ -94,7 +94,7 @@ BoxCollider2D:
   m_GameObject: {fileID: 3702855813416193851}
   m_Enabled: 1
   m_Density: 1
-  m_Material: {fileID: 0}
+  m_Material: {fileID: 6200000, guid: 1452b2d8a84c39e4b9c65cb442402750, type: 2}
   m_IncludeLayers:
     serializedVersion: 2
     m_Bits: 0
