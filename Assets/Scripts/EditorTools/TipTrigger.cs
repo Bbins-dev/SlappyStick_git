@@ -36,6 +36,7 @@ public class TipTrigger : MonoBehaviour
     private bool triggered;
     private RigidbodyType2D originalBodyType;
     private float originalGravityScale;
+    public bool HasTriggered => triggered;
 
     private void Awake()
     {

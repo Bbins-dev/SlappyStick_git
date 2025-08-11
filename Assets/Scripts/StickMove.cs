@@ -1,6 +1,7 @@
 using System.Collections;
 using UnityEngine;
 using TMPro;
+using UnityEngine.Serialization; // For FormerlySerializedAs
 
 [RequireComponent(typeof(Rigidbody2D))]
 public class StickMove : MonoBehaviour
@@ -35,14 +36,19 @@ public class StickMove : MonoBehaviour
     [Tooltip("TMP Text for displaying hold time & messages")]
     public TMP_Text holdTimeTMP;
 
-    [Header("Auto Reset On Obstacle Idle")]
-    [Tooltip("Seconds to wait on obstacle before resetting")]
-    public float idleOnObstacleSeconds = 1f;          // ← 퍼블릭으로 조절 가능
+    [Header("Auto Reset On Surface Idle")]
+    [FormerlySerializedAs("idleOnObstacleSeconds")]
+    [Tooltip("Seconds to wait while idle on specified tags before resetting")]
+    public float idleOnSurfaceSeconds = 1f;
+
     [Tooltip("Linear speed under which the stick is considered idle (m/s)")]
     public float idleSpeedThreshold = 0.05f;
+
     [Tooltip("Angular speed under which the stick is considered idle (deg/s)")]
     public float idleAngularSpeedThreshold = 5f;
 
+    [Tooltip("Tags that trigger idle-reset when touching (e.g., Obstacle, Floor, Target)")]
+    public string[] idleResetTags = new[] { "Obstacle", "Floor", "Target" };
 
     private Rigidbody2D rb;
     private Vector3 startPosition;
@@ -54,8 +60,12 @@ public class StickMove : MonoBehaviour
     private bool hasLaunched = false;
     private float holdTime = 0f;
     private CameraFollow cameraFollow;
-    private int obstacleContacts = 0; // 현재 Obstacle과의 접촉 수
-    private float obstacleIdleTimer = 0f;
+
+    // 👇 Unified contact counter for idle-reset surfaces
+    private int surfaceContacts = 0;
+    private float surfaceIdleTimer = 0f;
+
+    private TipTrigger tipTrigger;
 
     [HideInInspector] public bool IsPositioning => isPositioning;
 
@@ -66,29 +76,29 @@ public class StickMove : MonoBehaviour
         startRotation = transform.rotation;
         originalConstraints = rb.constraints;
 
-        // 🔽 Add: try bind UI right away; if not ready yet, wait a bit.
+        var tip = transform.Find("Tip");
+        if (tip) tipTrigger = tip.GetComponent<TipTrigger>();
+
         TryBindUI();
         if (holdTimeTMP == null)
             StartCoroutine(WaitAndBindUI());
 
-        // positioning 모드 진입: Y이동·회전 동결
+        // Positioning mode: freeze Y & rotation
         isPositioning = true;
         rb.constraints = RigidbodyConstraints2D.FreezePositionY | RigidbodyConstraints2D.FreezeRotation;
 
         if (holdTimeTMP != null)
             holdTimeTMP.gameObject.SetActive(false);
 
-        cameraFollow = Camera.main.GetComponent<CameraFollow>();
-        // 메시지 숨기기
+        cameraFollow = Camera.main ? Camera.main.GetComponent<CameraFollow>() : null;
         HideMessage();
     }
 
     void Update()
     {
-
         if (holdTimeTMP == null) TryBindUI();
 
-        // 1) Initial Camera Sequence: 입력 불가
+        // 1) Initial Camera Sequence: input blocked
         if (isPositioning)
         {
             if (cameraFollow == null || !cameraFollow.IsPositionCamReady)
@@ -97,13 +107,13 @@ public class StickMove : MonoBehaviour
                 return;
             }
 
-            // 2) Positioning Phase: 드래그 가능
+            // 2) Positioning phase
             ShowMessage("Drag to position");
             HandlePositioning();
             return;
         }
 
-        // 3) Positioning 끝난 후, 발사 전까지
+        // 3) After positioning, before launch
         if (!hasLaunched)
         {
             if (!isHolding)
@@ -113,15 +123,15 @@ public class StickMove : MonoBehaviour
             return;
         }
 
-        // 발사 후
+        // After launch
         HideMessage();
     }
 
     void FixedUpdate()
     {
-        // 발사 후 & 포지셔닝이 끝난 상태에서만 체크
+        // Check idle only after launch & after positioning
         if (hasLaunched && !isPositioning)
-            CheckIdleOnObstacle();
+            CheckIdleOnSurface();
     }
 
     private void HandlePositioning()
@@ -147,7 +157,7 @@ public class StickMove : MonoBehaviour
         {
             isHolding = true;
             holdTime = 0f;
-            ShowMessage(""); // 숫자 출력 준비
+            ShowMessage(""); // prepare numeric output
         }
         if (isHolding)
         {
@@ -168,7 +178,6 @@ public class StickMove : MonoBehaviour
     {
         if (holdTimeTMP == null) TryBindUI();
         if (holdTimeTMP == null) return;
-        // HUD가 꺼져 있으면 켠다
         if (UIRoot.Instance != null) UIRoot.Instance.EnsureHUDVisible();
         holdTimeTMP.gameObject.SetActive(true);
         holdTimeTMP.text = msg;
@@ -189,13 +198,33 @@ public class StickMove : MonoBehaviour
         rb.AddTorque(-torque, ForceMode2D.Impulse);
     }
 
+    // ----------------------
+    // Contact bookkeeping
+    // ----------------------
+    private bool IsIdleResetTag(string tag)
+    {
+        if (idleResetTags == null) return false;
+        for (int i = 0; i < idleResetTags.Length; i++)
+        {
+            if (!string.IsNullOrEmpty(idleResetTags[i]) && tag == idleResetTags[i])
+                return true;
+        }
+        return false;
+    }
+
     private void OnTriggerEnter2D(Collider2D c)
     {
         if (c.CompareTag("Respawn"))
             ResetStick();
 
-        if (c.CompareTag("Obstacle"))
-        obstacleContacts++;
+        if (IsIdleResetTag(c.tag))
+            surfaceContacts++;
+    }
+
+    private void OnTriggerExit2D(Collider2D c)
+    {
+        if (IsIdleResetTag(c.tag))
+            surfaceContacts = Mathf.Max(0, surfaceContacts - 1);
     }
 
     private void OnCollisionEnter2D(Collision2D c)
@@ -203,46 +232,77 @@ public class StickMove : MonoBehaviour
         if (c.collider.CompareTag("Respawn"))
             ResetStick();
 
-        if (c.collider.CompareTag("Obstacle"))
-        obstacleContacts++;
+        if (IsIdleResetTag(c.collider.tag))
+            surfaceContacts++;
     }
 
-    
     private void OnCollisionExit2D(Collision2D c)
     {
-        if (c.collider.CompareTag("Obstacle"))
-            obstacleContacts = Mathf.Max(0, obstacleContacts - 1);
+        if (IsIdleResetTag(c.collider.tag))
+            surfaceContacts = Mathf.Max(0, surfaceContacts - 1);
     }
 
-    private void OnTriggerExit2D(Collider2D c)
+    // ----------------------
+    // Idle check (unified)
+    // ----------------------
+    private void CheckIdleOnSurface()
     {
-        if (c.CompareTag("Obstacle"))
-            obstacleContacts = Mathf.Max(0, obstacleContacts - 1);
+
+        if (tipTrigger != null && tipTrigger.HasTriggered)
+        return; // stuck/clear 연출 중에는 idle 리셋 중단
+        
+        bool touching = surfaceContacts > 0;
+        bool linearIdle  = rb.velocity.sqrMagnitude <= (idleSpeedThreshold * idleSpeedThreshold);
+        bool angularIdle = Mathf.Abs(rb.angularVelocity) <= idleAngularSpeedThreshold;
+
+        if (touching && linearIdle && angularIdle)
+        {
+            surfaceIdleTimer += Time.fixedDeltaTime;
+            if (surfaceIdleTimer >= idleOnSurfaceSeconds)
+            {
+                surfaceIdleTimer = 0f;
+                ResetStick();
+            }
+        }
+        else
+        {
+            surfaceIdleTimer = 0f;
+        }
     }
 
+    // ----------------------
+    // Reset
+    // ----------------------
     private void ResetStick()
     {
-        // 위치·회전·속도 리셋
+        // position/rotation/velocity reset
         rb.velocity = Vector2.zero;
         rb.angularVelocity = 0f;
         transform.position = startPosition;
         transform.rotation = startRotation;
 
-        // positioning 모드 재진입
+        // back to positioning mode
         isPositioning = true;
         rb.constraints = RigidbodyConstraints2D.FreezePositionY | RigidbodyConstraints2D.FreezeRotation;
 
-        // 발사 상태 초기화
+        // launch state reset
         hasLaunched = false;
 
-        // 장애물 리셋 브로드캐스트
+        // broadcast obstacle reset
         ResetBus.Raise();
         Debug.Log("[StickMove] ResetBus.Raise()");
 
-        // ★ 추가: 매니저를 통한 강제 리셋
+        // force reset via LevelManager (if exists)
         FindObjectOfType<LevelManager>()?.ResetObstacles();
+
+        // clear counters/timers
+        surfaceContacts = 0;
+        surfaceIdleTimer = 0f;
     }
 
+    // ----------------------
+    // UI bind helpers
+    // ----------------------
     private void TryBindUI()
     {
         if (holdTimeTMP != null) return;
@@ -252,10 +312,8 @@ public class StickMove : MonoBehaviour
 
     private void SetHoldText(string s)
     {
-        // lazy bind
         if (holdTimeTMP == null) TryBindUI();
-        if (holdTimeTMP == null) return; // 여전히 없으면 그냥 패스
-
+        if (holdTimeTMP == null) return;
         holdTimeTMP.gameObject.SetActive(true);
         holdTimeTMP.text = s;
     }
@@ -268,30 +326,7 @@ public class StickMove : MonoBehaviour
             TryBindUI();
             if (holdTimeTMP != null) yield break;
             t += Time.unscaledDeltaTime;
-            yield return null; // wait next frame until UI scene finishes loading
-        }
-    }
-
-    private void CheckIdleOnObstacle()
-    {
-        // Obstacle과 맞닿아 있고 속도가 매우 낮으면 타이머 증가
-        bool touchingObstacle = obstacleContacts > 0;
-        bool linearIdle  = rb.velocity.sqrMagnitude <= (idleSpeedThreshold * idleSpeedThreshold);
-        bool angularIdle = Mathf.Abs(rb.angularVelocity) <= idleAngularSpeedThreshold;
-
-        if (touchingObstacle && linearIdle && angularIdle)
-        {
-            obstacleIdleTimer += Time.fixedDeltaTime;
-            if (obstacleIdleTimer >= idleOnObstacleSeconds)
-            {
-                // 리셋 실행
-                obstacleIdleTimer = 0f;
-                ResetStick(); // ← 네가 이미 쓰는 리셋 로직 (ResetBus, LM.ResetObstacles 포함)
-            }
-        }
-        else
-        {
-            obstacleIdleTimer = 0f;
+            yield return null;
         }
     }
 }
