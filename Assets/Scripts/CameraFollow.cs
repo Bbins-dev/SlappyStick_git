@@ -136,10 +136,25 @@ public class CameraFollow : MonoBehaviour
         var sm = FindObjectOfType<StickMove>();
         if (sm != null) SetFollowTarget(sm.transform, resetTimers: true);
     }
-    
+
     public void ConfigureTargets(Transform initial, Transform follow, bool resetTimers = true)
     {
         initialTarget = initial;               // 1) 먼저 초기 포커스 대상 지정 (예: 첫 번째 Target)
         SetFollowTarget(follow, resetTimers);  // 2) 그 다음 스틱을 팔로우 대상으로
+    }
+    
+    public void ApplyInitial(LevelData.CameraInitData init)
+    {
+        var cam = GetComponent<Camera>();
+        transform.position = init.position;
+        transform.rotation = Quaternion.Euler(0f, 0f, init.rotationZ);
+
+        if (cam != null)
+        {
+            if (cam.orthographic && init.orthographicSize > 0f)
+                cam.orthographicSize = init.orthographicSize;
+            else if (!cam.orthographic && init.fieldOfView > 0f)
+                cam.fieldOfView = init.fieldOfView;
+        }
     }
 }

@@ -12,6 +12,11 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 957a53c456dcda94f8654a2619c8ae9c, type: 3}
   m_Name: Level_000003
   m_EditorClassIdentifier: 
+  cameraInitial:
+    position: {x: 30.86, y: 9.25, z: -10}
+    rotationZ: 0
+    orthographicSize: 7
+    fieldOfView: 0
   stick:
     name: Stick
     tag: Stick

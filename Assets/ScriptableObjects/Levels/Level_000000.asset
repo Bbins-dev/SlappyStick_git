@@ -12,6 +12,11 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 957a53c456dcda94f8654a2619c8ae9c, type: 3}
   m_Name: Level_000000
   m_EditorClassIdentifier: 
+  cameraInitial:
+    position: {x: 17.150002, y: 9.04, z: -10}
+    rotationZ: 0
+    orthographicSize: 7
+    fieldOfView: 0
   stick:
     name: Stick
     tag: Stick
@@ -54,7 +59,7 @@ MonoBehaviour:
   - name: Target
     tag: Target
     layer: 7
-    position: {x: 14.908928, y: 2.6184063}
+    position: {x: 17.118929, y: 1.5984058}
     rotationZ: 0
     scale: {x: 0.63, y: 0.63}
     sprite: {fileID: 21300000, guid: ac07485b6f677fb4288d6ab434483c0d, type: 3}

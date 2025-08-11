@@ -45,6 +45,18 @@ public class LevelData : ScriptableObject
     }
 
     [System.Serializable]
+    public struct CameraInitData
+    {
+        public Vector3 position;      // initial camera world position
+        public float rotationZ;       // initial camera z-rotation (2D)
+        public float orthographicSize; // if using orthographic camera (2D)
+        public float fieldOfView;     // if using perspective camera (fallback)
+    }
+
+    [Header("Camera (Initial)")]
+    public CameraInitData cameraInitial;
+
+    [System.Serializable]
     public struct EntityData
     {
         [Header("Identity")]

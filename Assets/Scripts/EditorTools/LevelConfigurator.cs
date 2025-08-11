@@ -34,6 +34,10 @@ public class LevelConfigurator : MonoBehaviour
     [Tooltip("Last loaded group; Save uses this first")]
     public Transform currentGroup;
 
+    [Header("Camera Initial (Save/Load)")]
+    [Tooltip("If null, Camera.main will be used for save/load camera initial pose.")]
+    public Camera initialCamera;
+
 
 #if UNITY_EDITOR
     // ---------- Context Menus ----------
@@ -68,6 +72,8 @@ public class LevelConfigurator : MonoBehaviour
         levelData.targets   = CaptureGroupForSave(gTargets   != null ? gTargets   : targetsRoot,   SpawnMarker.SpawnType.Target);
         levelData.obstacles = CaptureGroupForSave(gObstacles != null ? gObstacles : obstaclesRoot, SpawnMarker.SpawnType.Obstacle);
         levelData.fulcrums  = CaptureGroupForSave(gFulcrums  != null ? gFulcrums  : fulcrumsRoot,  SpawnMarker.SpawnType.Fulcrum);
+        // Camera initial pose
+        CaptureCameraInitial();
 
         EditorUtility.SetDirty(levelData);
         AssetDatabase.SaveAssets();
@@ -124,6 +130,9 @@ public class LevelConfigurator : MonoBehaviour
         if (levelData.fulcrums != null)
             foreach (var e in levelData.fulcrums)
                 BuildEntityEditor(e, SpawnMarker.SpawnType.Fulcrum, fulcrumsParent, isStick:false);
+
+        // Apply saved camera-initial pose to the main/assigned camera
+        ApplyCameraInitialOnLoad();
 
         EditorSceneManager.MarkSceneDirty(gameObject.scene);
         Debug.Log($"[LevelConfigurator] Loaded LevelData into new group: {groupName}");
@@ -212,6 +221,7 @@ public class LevelConfigurator : MonoBehaviour
                 return m.gameObject;
         return null;
     }
+    
 
     private LevelData.EntityData[] CaptureGroupForSave(Transform root, SpawnMarker.SpawnType type)
     {
@@ -220,14 +230,14 @@ public class LevelConfigurator : MonoBehaviour
         if (root != null && root.childCount > 0)
         {
             for (int i = 0; i < root.childCount; i++)
-                list.Add(CaptureEntity(root.GetChild(i).gameObject, isStick:false));
+                list.Add(CaptureEntity(root.GetChild(i).gameObject, isStick: false));
         }
         else
         {
             var markers = FindObjectsOfType<SpawnMarker>(true);
             foreach (var m in markers)
                 if (m != null && m.type == type)
-                    list.Add(CaptureEntity(m.gameObject, isStick:false));
+                    list.Add(CaptureEntity(m.gameObject, isStick: false));
         }
 
         return list.ToArray();
@@ -452,58 +462,121 @@ public class LevelConfigurator : MonoBehaviour
             rb.gravityScale = e.rbGravityScale;
         }
     }
+    
+    private void CaptureCameraInitial()
+    {
+        // pick camera
+        var cam = initialCamera != null ? initialCamera : Camera.main;
+        if (cam == null)
+        {
+            Debug.LogWarning("[LevelConfigurator] No camera found to capture initial pose (initialCamera is null and Camera.main not found).");
+            levelData.cameraInitial = default;
+            return;
+        }
+
+        var tr = cam.transform;
+        var data = new LevelData.CameraInitData
+        {
+            position = tr.position,
+            rotationZ = tr.eulerAngles.z,
+            orthographicSize = cam.orthographic ? cam.orthographicSize : 0f,
+            fieldOfView = cam.orthographic ? 0f : cam.fieldOfView
+        };
+
+        levelData.cameraInitial = data;
+        // mark dirty handled already in SaveToLevelData(); but safe to ensure:
+        UnityEditor.EditorUtility.SetDirty(levelData);
+    }
+
+    private void ApplyCameraInitialOnLoad()
+    {
+        if (levelData == null)
+        {
+            Debug.LogWarning("[LevelConfigurator] No LevelData to apply camera initial.");
+            return;
+        }
+
+        var cam = initialCamera != null ? initialCamera : Camera.main;
+        if (cam == null)
+        {
+            Debug.LogWarning("[LevelConfigurator] No Camera found (initialCamera is null and no Camera.main).");
+            return;
+        }
+
+        var init = levelData.cameraInitial;
+
+        // Record for undo in editor
+        Undo.RecordObject(cam.transform, "Apply Camera Initial (LoadFromLevelData)");
+        Undo.RecordObject(cam, "Apply Camera Initial (LoadFromLevelData)");
+
+        // Position/Rotation
+        cam.transform.position = init.position;
+        cam.transform.rotation = Quaternion.Euler(0f, 0f, init.rotationZ);
+
+        // Size / FOV (apply only if a sensible value was saved)
+        if (cam.orthographic)
+        {
+            if (init.orthographicSize > 0f)
+                cam.orthographicSize = init.orthographicSize;
+        }
+        else
+        {
+            if (init.fieldOfView > 0f)
+                cam.fieldOfView = init.fieldOfView;
+        }
+    }
 
     private void AddColliderEditor(GameObject host, LevelData.Collider2DData d)
     {
         switch (d.kind)
         {
             case LevelData.ColliderKind.Box:
-            {
-                var c = Undo.AddComponent<BoxCollider2D>(host);
-                c.isTrigger = d.isTrigger;
-                c.offset    = d.offset;
-                c.size      = d.size;
-                break;
-            }
-            case LevelData.ColliderKind.Circle:
-            {
-                var c = Undo.AddComponent<CircleCollider2D>(host);
-                c.isTrigger = d.isTrigger;
-                c.offset    = d.offset;
-                c.radius    = d.radius;
-                break;
-            }
-            case LevelData.ColliderKind.Capsule:
-            {
-                var c = Undo.AddComponent<CapsuleCollider2D>(host);
-                c.isTrigger = d.isTrigger;
-                c.offset    = d.offset;
-                c.size      = d.size;
-                c.direction = d.capsuleDirection;
-                break;
-            }
-            case LevelData.ColliderKind.Polygon:
-            {
-                var c = Undo.AddComponent<PolygonCollider2D>(host);
-                c.isTrigger = d.isTrigger;
-                c.offset    = d.offset;
-                if (d.paths != null && d.paths.Length > 0)
                 {
-                    c.pathCount = d.paths.Length;
-                    for (int i = 0; i < d.paths.Length; i++)
-                        c.SetPath(i, d.paths[i].points);
+                    var c = Undo.AddComponent<BoxCollider2D>(host);
+                    c.isTrigger = d.isTrigger;
+                    c.offset = d.offset;
+                    c.size = d.size;
+                    break;
                 }
-                break;
-            }
+            case LevelData.ColliderKind.Circle:
+                {
+                    var c = Undo.AddComponent<CircleCollider2D>(host);
+                    c.isTrigger = d.isTrigger;
+                    c.offset = d.offset;
+                    c.radius = d.radius;
+                    break;
+                }
+            case LevelData.ColliderKind.Capsule:
+                {
+                    var c = Undo.AddComponent<CapsuleCollider2D>(host);
+                    c.isTrigger = d.isTrigger;
+                    c.offset = d.offset;
+                    c.size = d.size;
+                    c.direction = d.capsuleDirection;
+                    break;
+                }
+            case LevelData.ColliderKind.Polygon:
+                {
+                    var c = Undo.AddComponent<PolygonCollider2D>(host);
+                    c.isTrigger = d.isTrigger;
+                    c.offset = d.offset;
+                    if (d.paths != null && d.paths.Length > 0)
+                    {
+                        c.pathCount = d.paths.Length;
+                        for (int i = 0; i < d.paths.Length; i++)
+                            c.SetPath(i, d.paths[i].points);
+                    }
+                    break;
+                }
             case LevelData.ColliderKind.Edge:
-            {
-                var c = Undo.AddComponent<EdgeCollider2D>(host);
-                c.isTrigger = d.isTrigger;
-                c.offset    = d.offset;
-                if (d.edgePoints != null && d.edgePoints.Length > 0)
-                    c.points = d.edgePoints;
-                break;
-            }
+                {
+                    var c = Undo.AddComponent<EdgeCollider2D>(host);
+                    c.isTrigger = d.isTrigger;
+                    c.offset = d.offset;
+                    if (d.edgePoints != null && d.edgePoints.Length > 0)
+                        c.points = d.edgePoints;
+                    break;
+                }
             case LevelData.ColliderKind.None:
             default:
                 break;

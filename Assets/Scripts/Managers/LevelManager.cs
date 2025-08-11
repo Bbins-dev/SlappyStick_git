@@ -83,6 +83,11 @@ public class LevelManager : MonoBehaviour
         var camFollow = Camera.main ? Camera.main.GetComponent<CameraFollow>() : null;
         if (camFollow != null && stickGo != null)
         {
+
+            // ⬇️ 먼저 LevelData에 저장된 "카메라 최초 위치" 적용
+            camFollow.ApplyInitial(data.cameraInitial);
+
+        // ⬇️ 그 다음, 기존대로 초기 포커스/팔로우 타깃 구성
             camFollow.ConfigureTargets(
                 firstTarget != null ? firstTarget : stickGo.transform, // initialTarget
                 stickGo.transform,                                     // follow target

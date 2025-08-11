@@ -10,6 +10,8 @@ TagManager:
   - Tip
   - Target
   - Obstacle
+  - GameManager
+  - Floor
   layers:
   - Default
   - TransparentFX
