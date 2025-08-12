@@ -6,6 +6,7 @@ using UnityEngine.Events;
 [DisallowMultipleComponent]
 public class GameManager : MonoBehaviour
 {
+    public static event System.Action StageClearedStatic;
     public static GameManager Instance { get; private set; }
 
     [Header("Databases")]
@@ -78,10 +79,11 @@ public class GameManager : MonoBehaviour
 
         PlayerPrefs.SetInt("HighestUnlocked", highestUnlockedLevel);
         PlayerPrefs.Save();
-        
+
         // ✅ 진짜 이벤트가 쏴지는지 확인 로그
         Debug.Log($"[GameManager] StageClear fired. CurrentLevel={CurrentLevel}, HighestUnlocked={highestUnlockedLevel}");
         onStageCleared?.Invoke();
+        StageClearedStatic?.Invoke();      // static event (robust)
     }
 
     // Alias for tools/scripts expecting this name (e.g., earlier TipTrigger samples).

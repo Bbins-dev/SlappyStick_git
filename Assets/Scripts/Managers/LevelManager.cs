@@ -16,6 +16,9 @@ public class LevelManager : MonoBehaviour
     private readonly List<Resettable2D> obstacleResets = new List<Resettable2D>();
     private void Start()
     {
+#if UNITY_EDITOR
+        DisableEditorPreviewsIfAny();   // 🔹 가장 먼저 프리뷰 비활성화
+#endif
         LevelData data = null;
 
 #if UNITY_EDITOR
@@ -265,6 +268,50 @@ public class LevelManager : MonoBehaviour
                 break;
         }
     }
+
+#if UNITY_EDITOR
+    /// <summary>
+    /// Disable any editor preview containers/groups so they don't collide with runtime spawns.
+    /// Looks for names used by LevelConfigurator: "__PreviewContainer", "__Preview_*", "__PreviewGroup_*".
+    /// </summary>
+    private void DisableEditorPreviewsIfAny()
+    {
+        var scene = gameObject.scene;
+        var roots = scene.GetRootGameObjects();
+        int disabled = 0;
+
+        foreach (var go in roots)
+            disabled += DisableRecursive(go.transform);
+
+        if (disabled > 0)
+            Debug.Log($"[LevelManager] Disabled {disabled} editor preview object(s).");
+
+        int DisableRecursive(Transform t)
+        {
+            int count = 0;
+            string n = t.name;
+
+            bool isPreview =
+                n == "__PreviewContainer" ||
+                n.StartsWith("__Preview_") ||
+                n.StartsWith("__PreviewGroup_");
+
+            if (isPreview)
+            {
+                if (t.gameObject.activeSelf)
+                {
+                    t.gameObject.SetActive(false);
+                    count++;
+                }
+                return count; // 이 밑의 자식들은 굳이 확인할 필요 없이 꺼짐
+            }
+
+            for (int i = 0; i < t.childCount; i++)
+                count += DisableRecursive(t.GetChild(i));
+            return count;
+        }
+    }
+#endif
     
     public void ResetObstacles()
     {
