@@ -152,7 +152,7 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: 
   clearModeOnLoad: 1
-  levelData: {fileID: 11400000, guid: dd152b71657639346b0a21829d7b8101, type: 2}
+  levelData: {fileID: 11400000, guid: 6b6e3c517ce8de947bb5dcce2032bd33, type: 2}
   stickRoot: {fileID: 0}
   targetsRoot: {fileID: 0}
   obstaclesRoot: {fileID: 0}
@@ -398,7 +398,6 @@ GameObject:
   m_Component:
   - component: {fileID: 540972861}
   - component: {fileID: 540972865}
-  - component: {fileID: 540972864}
   - component: {fileID: 540972863}
   - component: {fileID: 540972862}
   m_Layer: 7
@@ -510,18 +509,6 @@ SpriteRenderer:
   m_WasSpriteAssigned: 1
   m_MaskInteraction: 0
   m_SpriteSortPoint: 0
---- !u!114 &540972864
-MonoBehaviour:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 540972860}
-  m_Enabled: 1
-  m_EditorHideFlags: 0
-  m_Script: {fileID: 1314257806}
-  m_Name: 
-  m_EditorClassIdentifier: 
 --- !u!114 &540972865
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -658,7 +645,6 @@ GameObject:
   m_Component:
   - component: {fileID: 1255972250}
   - component: {fileID: 1255972254}
-  - component: {fileID: 1255972253}
   - component: {fileID: 1255972252}
   - component: {fileID: 1255972251}
   m_Layer: 0
@@ -780,18 +766,6 @@ SpriteRenderer:
   m_WasSpriteAssigned: 1
   m_MaskInteraction: 0
   m_SpriteSortPoint: 0
---- !u!114 &1255972253
-MonoBehaviour:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 1255972249}
-  m_Enabled: 1
-  m_EditorHideFlags: 0
-  m_Script: {fileID: 1314257806}
-  m_Name: 
-  m_EditorClassIdentifier: 
 --- !u!114 &1255972254
 MonoBehaviour:
   m_ObjectHideFlags: 0

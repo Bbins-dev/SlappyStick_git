@@ -38,6 +38,9 @@ public class ClearPopupController : MonoBehaviour
 
     private void Awake()
     {
+        if (!canvasGroup)
+        canvasGroup = GetComponent<CanvasGroup>() ?? gameObject.AddComponent<CanvasGroup>();
+
         SetVisible(false, instant:true);
     }
 

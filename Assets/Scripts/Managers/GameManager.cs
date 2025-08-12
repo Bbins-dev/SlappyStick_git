@@ -37,6 +37,9 @@ public class GameManager : MonoBehaviour
 
             // Optional but recommended: ensure this object is tagged for auto-find
             // Set the tag to "GameManager" in the Inspector (create the tag if needed).
+
+            // ✅ 보장: UnityEvent null 방지
+            if (onStageCleared == null) onStageCleared = new UnityEvent();
         }
         else
         {
@@ -75,7 +78,9 @@ public class GameManager : MonoBehaviour
 
         PlayerPrefs.SetInt("HighestUnlocked", highestUnlockedLevel);
         PlayerPrefs.Save();
-
+        
+        // ✅ 진짜 이벤트가 쏴지는지 확인 로그
+        Debug.Log($"[GameManager] StageClear fired. CurrentLevel={CurrentLevel}, HighestUnlocked={highestUnlockedLevel}");
         onStageCleared?.Invoke();
     }
 

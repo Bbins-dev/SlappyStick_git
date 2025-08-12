@@ -1,51 +1,90 @@
 // UICameraBinder.cs
 using UnityEngine;
 
-[DefaultExecutionOrder(-1000)] // 되도록 빨리 실행
+[DefaultExecutionOrder(-1000)]
 public class UICameraBinder : MonoBehaviour
 {
     [Header("References")]
-    public Canvas canvas;          // PlayUIOnly의 Canvas
-    public Camera localUiCamera;   // PlayUIOnly의 UICamera
+    public Canvas canvas;
+    public Camera localUiCamera;
+
+    [Header("Behavior")]
+    [Tooltip("When a Main Camera exists (normal gameplay), use Overlay so world cannot cover UI.")]
+    public bool preferOverlayWhenMainCamera = true;
+
+    [Tooltip("When using Screen Space - Camera, place the canvas plane just in front of the camera near clip.")]
+    public float planeDistanceOffset = 0.05f;
+
+    [Header("Local Preview (PlayUIOnly only)")]
+    [Tooltip("Clear flags used only when previewing PlayUIOnly without a Main Camera.")]
+    public CameraClearFlags localPreviewClearFlags = CameraClearFlags.Skybox; // <- Skybox by default
+    [Tooltip("Background color when using SolidColor for local preview.")]
+    public Color localPreviewBackground = new Color(0.07f, 0.10f, 0.14f, 1f);
+    [Tooltip("Add a Skybox component to the local UI camera if missing (uses RenderSettings.skybox).")]
+    public bool addSkyboxComponentIfMissing = true;
 
     [Header("Optional")]
-    public string mainCameraTag = "MainCamera"; // 기본 "MainCamera"
+    public string mainCameraTag = "MainCamera";
 
-    void Awake()
+    private void Awake()
     {
-        if (!canvas) canvas = FindObjectOfType<Canvas>();
+        if (!canvas) canvas = GetComponentInChildren<Canvas>(true) ?? FindObjectOfType<Canvas>();
         if (!localUiCamera) localUiCamera = GetComponentInChildren<Camera>(true);
 
-        // 안전장치: Canvas는 반드시 Screen Space - Camera
-        if (canvas) canvas.renderMode = RenderMode.ScreenSpaceCamera;
+        var mainCam = Camera.main;
 
-        // 메인 카메라 탐색
-        Camera mainCam = Camera.main;
-        if (mainCam != null && mainCam != localUiCamera)
+        // Normal gameplay (Main Camera exists) → Overlay (safest)
+        if (preferOverlayWhenMainCamera && mainCam != null)
         {
-            // ▶ 합쳐서 로드된 경우: 메인 카메라 사용, UICamera 비활성
-            if (canvas) canvas.worldCamera = mainCam;
+            if (canvas)
+            {
+                canvas.renderMode = RenderMode.ScreenSpaceOverlay;
+                canvas.worldCamera = null;
+            }
             if (localUiCamera) localUiCamera.enabled = false;
+            return;
+        }
+
+        // PlayUIOnly preview (no Main Camera) → use local UI camera with chosen clear
+        if (localUiCamera != null)
+        {
+            if (canvas)
+            {
+                canvas.renderMode = RenderMode.ScreenSpaceCamera;
+                canvas.worldCamera = localUiCamera;
+
+                float near = localUiCamera.nearClipPlane;
+                canvas.planeDistance = Mathf.Max(near + planeDistanceOffset, 0.01f);
+            }
+
+            localUiCamera.enabled = true;
+            localUiCamera.depth = 100;
+            localUiCamera.cullingMask = LayerMask.GetMask("UI");
+
+            // Clear flags just for local preview
+            localUiCamera.clearFlags = localPreviewClearFlags;
+            if (localPreviewClearFlags == CameraClearFlags.SolidColor)
+            {
+                localUiCamera.backgroundColor = localPreviewBackground;
+            }
+            else if (localPreviewClearFlags == CameraClearFlags.Skybox && addSkyboxComponentIfMissing)
+            {
+                // ensure there's a Skybox component (uses RenderSettings.skybox)
+                if (!localUiCamera.GetComponent<Skybox>())
+                    localUiCamera.gameObject.AddComponent<Skybox>();
+            }
+
+            // Avoid double AudioListeners
+            var al = localUiCamera.GetComponent<AudioListener>();
+            if (al) al.enabled = false;
         }
         else
         {
-            // ▶ PlayUIOnly 단독 미리보기: 로컬 UICamera 사용
-            if (localUiCamera)
+            // Fallback: no camera at all → Overlay
+            if (canvas)
             {
-                if (canvas) canvas.worldCamera = localUiCamera;
-                localUiCamera.enabled = true;
-
-                // 권장값(안전)
-                localUiCamera.clearFlags = CameraClearFlags.Depth;
-                localUiCamera.cullingMask = LayerMask.GetMask("UI");
-                localUiCamera.depth = 100;
-                var al = localUiCamera.GetComponent<AudioListener>();
-                if (al) al.enabled = false;
-            }
-            else
-            {
-                // 최후 보루: 카메라가 하나도 없으면 Overlay로 전환
-                if (canvas) canvas.renderMode = RenderMode.ScreenSpaceOverlay;
+                canvas.renderMode = RenderMode.ScreenSpaceOverlay;
+                canvas.worldCamera = null;
             }
         }
     }
