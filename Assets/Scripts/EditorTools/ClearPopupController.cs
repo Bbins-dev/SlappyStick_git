@@ -201,28 +201,70 @@ public class ClearPopupController : MonoBehaviour
     }
 
     private IEnumerator RestartGameplaySceneKeepUI()
+{
+    Time.timeScale = 1f;
+
+    // 1) Find gameplay scene holder
+    var lm = FindObjectOfType<LevelManager>();
+    if (lm == null)
     {
-        Time.timeScale = 1f;
-
-        // Find gameplay scene via LevelManager
-        var lm = FindObjectOfType<LevelManager>();
-        if (lm == null)
-        {
-            // Fallback: reload active scene single
-            var active = SceneManager.GetActiveScene();
-            yield return SceneManager.LoadSceneAsync(active.name, LoadSceneMode.Single);
-            yield break;
-        }
-
-        var gameplayScene = lm.gameObject.scene;
-
-        // Reload gameplay scene additively so UI stays
-        yield return SceneManager.UnloadSceneAsync(gameplayScene);
-        yield return SceneManager.LoadSceneAsync(gameplayScene.name, LoadSceneMode.Additive);
-
-        var reloaded = SceneManager.GetSceneByName(gameplayScene.name);
-        if (reloaded.IsValid()) SceneManager.SetActiveScene(reloaded);
-
-        Hide();
+        // Fallback: reload active scene single (keeps things simple)
+        var active = SceneManager.GetActiveScene();
+        yield return SceneManager.LoadSceneAsync(active.name, LoadSceneMode.Single);
+        yield break;
     }
+
+    // 2) Cache info BEFORE unload (Scene handle becomes invalid after unload)
+    var gameplayScene = lm.gameObject.scene;
+    string gameplayName = gameplayScene.name;   // e.g., "MakingScene" or "PlayScene"
+    string gameplayPath = gameplayScene.path;   // full asset path (Editor only)
+    bool gameplayValid = gameplayScene.IsValid();
+
+#if UNITY_EDITOR
+    // Is the scene in Build Settings?
+    int buildIndexByPath = UnityEngine.SceneManagement.SceneUtility.GetBuildIndexByScenePath(gameplayPath);
+    bool inBuild = buildIndexByPath >= 0;
+#else
+    bool inBuild = true; // at runtime you should only use scenes in build
+#endif
+
+    if (!gameplayValid || string.IsNullOrEmpty(gameplayName))
+    {
+        Debug.LogWarning("[ClearPopup] Gameplay scene info invalid; using active scene fallback.");
+        var active = SceneManager.GetActiveScene();
+        gameplayName = active.name;
+#if UNITY_EDITOR
+        gameplayPath = active.path;
+        inBuild = UnityEngine.SceneManagement.SceneUtility.GetBuildIndexByScenePath(gameplayPath) >= 0;
+#endif
+    }
+
+    // 3) Unload gameplay scene only (keep UI scene alive)
+    yield return SceneManager.UnloadSceneAsync(gameplayScene);
+
+    // 4) Reload gameplay scene additively
+#if UNITY_EDITOR
+    if (!inBuild && !string.IsNullOrEmpty(gameplayPath))
+    {
+        // Editor-only reload by path when the scene isn't in Build Settings
+        var pars = new LoadSceneParameters(LoadSceneMode.Additive);
+        yield return UnityEditor.SceneManagement.EditorSceneManager.LoadSceneAsyncInPlayMode(gameplayPath, pars);
+    }
+    else
+    {
+        yield return SceneManager.LoadSceneAsync(gameplayName, LoadSceneMode.Additive);
+    }
+#else
+    // Runtime: must be in Build Settings
+    yield return SceneManager.LoadSceneAsync(gameplayName, LoadSceneMode.Additive);
+#endif
+
+    // 5) Make the reloaded gameplay scene active
+    var reloaded = SceneManager.GetSceneByName(gameplayName);
+    if (reloaded.IsValid()) SceneManager.SetActiveScene(reloaded);
+
+    // 6) Hide popup
+    Hide();
+}
+
 }
