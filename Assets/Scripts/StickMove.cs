@@ -50,6 +50,28 @@ public class StickMove : MonoBehaviour
     [Tooltip("Tags that trigger idle-reset when touching (e.g., Obstacle, Floor, Target)")]
     public string[] idleResetTags = new[] { "Obstacle", "Floor", "Target" };
 
+    // ───────────────────────── NEW: fast-stuck heuristics ─────────────────────────
+    [Header("Fast Reset (Stuck/Oscillation)")]
+    [Tooltip("Hard cap: reset if a shot lasts longer than this (seconds)")]
+    public float maxShotSeconds = 7f;
+
+    [Tooltip("Look-back window to measure progress (seconds)")]
+    public float progressWindowSeconds = 0.8f;
+
+    [Tooltip("If moved less than this distance within the window while in contact, consider stuck")]
+    public float minProgressDistance = 0.15f;
+
+    [Tooltip("How long the 'no progress' condition must persist before reset (seconds)")]
+    public float contactStuckSeconds = 0.5f;
+
+    [Tooltip("Time window to count angular velocity sign flips (seconds)")]
+    public float angularFlipWindowSeconds = 1.2f;
+
+    [Tooltip("If sign flips exceed this within the window (and moving slowly), reset")]
+    public int angularFlipCountToReset = 10;
+
+    // ──────────────────────────────────────────────────────────────────────────────
+
     private Rigidbody2D rb;
     private Vector3 startPosition;
     private Quaternion startRotation;
@@ -61,11 +83,23 @@ public class StickMove : MonoBehaviour
     private float holdTime = 0f;
     private CameraFollow cameraFollow;
 
-    // 👇 Unified contact counter for idle-reset surfaces
     private int surfaceContacts = 0;
     private float surfaceIdleTimer = 0f;
 
     private TipTrigger tipTrigger;
+
+    // NEW: timers/buffers for fast-stuck
+    private float shotTimer = 0f;
+    private float stuckTimer = 0f;
+
+    private Vector2[] posBuffer;
+    private float[]   timeBuffer;
+    private int bufSize;
+    private int bufIndex = 0;
+
+    private int angularFlipCount = 0;
+    private float angularFlipTimer = 0f;
+    private float lastAngularVel = 0f;
 
     [HideInInspector] public bool IsPositioning => isPositioning;
 
@@ -92,13 +126,18 @@ public class StickMove : MonoBehaviour
 
         cameraFollow = Camera.main ? Camera.main.GetComponent<CameraFollow>() : null;
         HideMessage();
+
+        // NEW: init ring buffer for progress window
+        bufSize = Mathf.Clamp(Mathf.CeilToInt(progressWindowSeconds / Mathf.Max(Time.fixedDeltaTime, 0.005f)) + 6, 16, 240);
+        posBuffer  = new Vector2[bufSize];
+        timeBuffer = new float[bufSize];
+        SeedProgressBuffer();
     }
 
     void Update()
     {
         if (holdTimeTMP == null) TryBindUI();
 
-        // 1) Initial Camera Sequence: input blocked
         if (isPositioning)
         {
             if (cameraFollow == null || !cameraFollow.IsPositionCamReady)
@@ -107,13 +146,11 @@ public class StickMove : MonoBehaviour
                 return;
             }
 
-            // 2) Positioning phase
             ShowMessage("Drag to position");
             HandlePositioning();
             return;
         }
 
-        // 3) After positioning, before launch
         if (!hasLaunched)
         {
             if (!isHolding)
@@ -123,15 +160,19 @@ public class StickMove : MonoBehaviour
             return;
         }
 
-        // After launch
         HideMessage();
     }
 
     void FixedUpdate()
     {
-        // Check idle only after launch & after positioning
         if (hasLaunched && !isPositioning)
-            CheckIdleOnSurface();
+        {
+            shotTimer += Time.fixedDeltaTime;
+            UpdateProgressBuffer();
+
+            CheckIdleOnSurface();      // 기존 느린-아이들 체크
+            CheckFastStuckHeuristics(); // NEW 빠른-스턱 체크
+        }
     }
 
     private void HandlePositioning()
@@ -148,6 +189,14 @@ public class StickMove : MonoBehaviour
         {
             isPositioning = false;
             rb.constraints = originalConstraints;
+
+            // reset shot timers just in case
+            shotTimer = 0f;
+            stuckTimer = 0f;
+            angularFlipCount = 0;
+            angularFlipTimer = 0f;
+            lastAngularVel = rb.angularVelocity;
+            SeedProgressBuffer();
         }
     }
 
@@ -157,7 +206,7 @@ public class StickMove : MonoBehaviour
         {
             isHolding = true;
             holdTime = 0f;
-            ShowMessage(""); // prepare numeric output
+            ShowMessage("");
         }
         if (isHolding)
         {
@@ -171,6 +220,14 @@ public class StickMove : MonoBehaviour
             float p = holdTime / maxHoldTime;
             StartCoroutine(LaunchAfterDelay(p));
             hasLaunched = true;
+
+            // NEW: start shot window fresh
+            shotTimer = 0f;
+            stuckTimer = 0f;
+            angularFlipCount = 0;
+            angularFlipTimer = 0f;
+            lastAngularVel = 0f;
+            SeedProgressBuffer();
         }
     }
 
@@ -198,9 +255,7 @@ public class StickMove : MonoBehaviour
         rb.AddTorque(-torque, ForceMode2D.Impulse);
     }
 
-    // ----------------------
-    // Contact bookkeeping
-    // ----------------------
+    // ---------------------- Contacts ----------------------
     private bool IsIdleResetTag(string tag)
     {
         if (idleResetTags == null) return false;
@@ -242,15 +297,11 @@ public class StickMove : MonoBehaviour
             surfaceContacts = Mathf.Max(0, surfaceContacts - 1);
     }
 
-    // ----------------------
-    // Idle check (unified)
-    // ----------------------
+    // ---------------------- Idle (existing) ----------------------
     private void CheckIdleOnSurface()
     {
+        if (tipTrigger != null && tipTrigger.HasTriggered) return;
 
-        if (tipTrigger != null && tipTrigger.HasTriggered)
-        return; // stuck/clear 연출 중에는 idle 리셋 중단
-        
         bool touching = surfaceContacts > 0;
         bool linearIdle  = rb.velocity.sqrMagnitude <= (idleSpeedThreshold * idleSpeedThreshold);
         bool angularIdle = Mathf.Abs(rb.angularVelocity) <= idleAngularSpeedThreshold;
@@ -270,39 +321,126 @@ public class StickMove : MonoBehaviour
         }
     }
 
-    // ----------------------
-    // Reset
-    // ----------------------
+    // ---------------------- NEW: fast-stuck ----------------------
+    private void SeedProgressBuffer()
+    {
+        if (posBuffer == null || timeBuffer == null) return;
+        bufIndex = 0;
+        var p = (Vector2)transform.position;
+        for (int i = 0; i < bufSize; i++)
+        {
+            posBuffer[i] = p;
+            timeBuffer[i] = Time.time;
+        }
+    }
+
+    private void UpdateProgressBuffer()
+    {
+        if (posBuffer == null) return;
+        posBuffer[bufIndex]  = rb.position;
+        timeBuffer[bufIndex] = Time.time;
+        bufIndex = (bufIndex + 1) % bufSize;
+    }
+
+    private float DistanceSinceWindow(float seconds)
+    {
+        float cutoff = Time.time - seconds;
+        // find oldest sample within window
+        int idx = bufIndex;
+        for (int i = 0; i < bufSize; i++)
+        {
+            int j = (bufIndex - 1 - i + bufSize) % bufSize;
+            if (timeBuffer[j] <= cutoff || i == bufSize - 1)
+            {
+                idx = j;
+                break;
+            }
+        }
+        return Vector2.Distance(rb.position, posBuffer[idx]);
+    }
+
+    private void CheckFastStuckHeuristics()
+    {
+        if (tipTrigger != null && tipTrigger.HasTriggered) return;
+
+        // (A) hard cap by time
+        if (shotTimer >= maxShotSeconds)
+        {
+            ResetStick();
+            return;
+        }
+
+        // (B) low progress while touching
+        if (surfaceContacts > 0)
+        {
+            float moved = DistanceSinceWindow(progressWindowSeconds);
+            if (moved < minProgressDistance)
+            {
+                stuckTimer += Time.fixedDeltaTime;
+                if (stuckTimer >= contactStuckSeconds)
+                {
+                    ResetStick();
+                    return;
+                }
+            }
+            else stuckTimer = 0f;
+        }
+        else stuckTimer = 0f;
+
+        // (C) oscillation (angular velocity sign flips)
+        float av = rb.angularVelocity;
+        bool flipped =
+            Mathf.Sign(av) != Mathf.Sign(lastAngularVel) &&
+            Mathf.Abs(av) > 1f && Mathf.Abs(lastAngularVel) > 1f;
+
+        if (flipped) angularFlipCount++;
+        lastAngularVel = av;
+
+        angularFlipTimer += Time.fixedDeltaTime;
+        if (angularFlipTimer >= angularFlipWindowSeconds)
+        {
+            angularFlipTimer = 0f;
+            angularFlipCount = 0;
+        }
+
+        bool slowLinear = rb.velocity.magnitude < 0.3f;
+        if (surfaceContacts > 0 && slowLinear && angularFlipCount >= angularFlipCountToReset)
+        {
+            ResetStick();
+        }
+    }
+
+    // ---------------------- Reset ----------------------
     private void ResetStick()
     {
-        // position/rotation/velocity reset
         rb.velocity = Vector2.zero;
         rb.angularVelocity = 0f;
         transform.position = startPosition;
         transform.rotation = startRotation;
 
-        // back to positioning mode
         isPositioning = true;
         rb.constraints = RigidbodyConstraints2D.FreezePositionY | RigidbodyConstraints2D.FreezeRotation;
 
-        // launch state reset
         hasLaunched = false;
 
-        // broadcast obstacle reset
         ResetBus.Raise();
         Debug.Log("[StickMove] ResetBus.Raise()");
 
-        // force reset via LevelManager (if exists)
         FindObjectOfType<LevelManager>()?.ResetObstacles();
 
-        // clear counters/timers
         surfaceContacts = 0;
         surfaceIdleTimer = 0f;
+
+        // NEW: clear fast-stuck state
+        shotTimer = 0f;
+        stuckTimer = 0f;
+        angularFlipCount = 0;
+        angularFlipTimer = 0f;
+        lastAngularVel = 0f;
+        SeedProgressBuffer();
     }
 
-    // ----------------------
-    // UI bind helpers
-    // ----------------------
+    // ---------------------- UI bind helpers ----------------------
     private void TryBindUI()
     {
         if (holdTimeTMP != null) return;
