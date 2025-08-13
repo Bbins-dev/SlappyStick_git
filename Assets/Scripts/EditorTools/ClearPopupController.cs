@@ -1,9 +1,14 @@
-using UnityEngine;
-using UnityEngine.UI;
-using UnityEngine.SceneManagement;
-using TMPro;
 using System.Collections;
+using System.Collections.Generic;
 using System.IO;
+using TMPro;
+using UnityEngine;
+using UnityEngine.SceneManagement;
+using UnityEngine.UI;
+
+#if UNITY_EDITOR
+using UnityEditor.SceneManagement; // EditorSceneManager
+#endif
 
 [AddComponentMenu("StickIt/ClearPopup Controller")]
 public class ClearPopupController : MonoBehaviour
@@ -34,7 +39,10 @@ public class ClearPopupController : MonoBehaviour
     private Coroutine fxCo;
     private bool isShowing;
 
-    private void Reset() { canvasGroup = GetComponent<CanvasGroup>(); }
+    private void Reset()
+    {
+        canvasGroup = GetComponent<CanvasGroup>();
+    }
 
     private void Awake()
     {
@@ -60,6 +68,9 @@ public class ClearPopupController : MonoBehaviour
         if (btnNextLevel)     { btnNextLevel.onClick.RemoveAllListeners();     btnNextLevel.onClick.AddListener(OnClick_NextLevel); }
     }
 
+    // ─────────────────────────────────────────────────────────────────────────
+    // Show / Hide
+    // ─────────────────────────────────────────────────────────────────────────
     public void Show()
     {
         if (isShowing) return;
@@ -67,7 +78,7 @@ public class ClearPopupController : MonoBehaviour
 
         if (pauseOnShow) Time.timeScale = 0f;
 
-        RefreshButtons(); // ← NextLevel 상태 갱신
+        RefreshButtons();
         SetVisible(true, instant: false);
 
         if (firstSelected)
@@ -118,7 +129,7 @@ public class ClearPopupController : MonoBehaviour
     }
 
     // ─────────────────────────────────────────────────────────────────────────
-    // UI State (NextLevel 잠금/활성)
+    // UI State (NextLevel lock)
     // ─────────────────────────────────────────────────────────────────────────
     private void RefreshButtons()
     {
@@ -138,7 +149,7 @@ public class ClearPopupController : MonoBehaviour
     }
 
     // ─────────────────────────────────────────────────────────────────────────
-    // Buttons
+    // Button handlers
     // ─────────────────────────────────────────────────────────────────────────
     public void OnClick_SaveScreenshot() { StartCoroutine(CaptureWorldWithoutUI()); }
 
@@ -167,10 +178,7 @@ public class ClearPopupController : MonoBehaviour
             gm.SetCurrentLevel(next);
             StartCoroutine(RestartGameplaySceneKeepUI());
         }
-        else
-        {
-            // Locked: 버튼이 이미 비활성화되어 있음. (원하면 사운드/토스트 추가)
-        }
+        // else: locked → button is already disabled
     }
 
     // ─────────────────────────────────────────────────────────────────────────
@@ -178,7 +186,6 @@ public class ClearPopupController : MonoBehaviour
     // ─────────────────────────────────────────────────────────────────────────
     private IEnumerator CaptureWorldWithoutUI()
     {
-        // Disable all canvases (works while paused)
         var canvases = GameObject.FindObjectsOfType<Canvas>(true);
         var prev = new bool[canvases.Length];
         for (int i = 0; i < canvases.Length; i++)
@@ -200,71 +207,73 @@ public class ClearPopupController : MonoBehaviour
             if (canvases[i] != null) canvases[i].enabled = prev[i];
     }
 
+    /// <summary>
+    /// Reload gameplay scene(s) while keeping UI scene alive.
+    /// - Unloads ALL scenes that contain a LevelManager (handles duplicates)
+    /// - Reloads one of them additively (Editor supports non-build scenes)
+    /// </summary>
     private IEnumerator RestartGameplaySceneKeepUI()
-{
-    Time.timeScale = 1f;
-
-    // 1) Find gameplay scene holder
-    var lm = FindObjectOfType<LevelManager>();
-    if (lm == null)
     {
-        // Fallback: reload active scene single (keeps things simple)
-        var active = SceneManager.GetActiveScene();
-        yield return SceneManager.LoadSceneAsync(active.name, LoadSceneMode.Single);
-        yield break;
+        Time.timeScale = 1f;
+
+        // 1) 현재 로드된 모든 씬 중에서 LevelManager가 "실제로 존재"하는 씬만 수집
+        var gameplayScenes = new List<Scene>();
+        for (int i = 0; i < SceneManager.sceneCount; i++)
+        {
+            var s = SceneManager.GetSceneAt(i);
+            if (!s.IsValid() || !s.isLoaded) continue;
+
+            var roots = s.GetRootGameObjects();
+            bool hasLM = false;
+            foreach (var r in roots)
+            {
+                if (!r) continue;
+                if (r.GetComponentInChildren<LevelManager>(true) != null) { hasLM = true; break; }
+            }
+            if (hasLM) gameplayScenes.Add(s);
+        }
+
+        // 2) 가드: 못 찾았다면(아주 드문 케이스) 활성 씬을 Single로 리로드
+        if (gameplayScenes.Count == 0)
+        {
+            var active = SceneManager.GetActiveScene();
+            Debug.LogWarning("[ClearPopup] No LevelManager scenes found. Reloading active scene (Single) as fallback.");
+            yield return SceneManager.LoadSceneAsync(active.name, LoadSceneMode.Single);
+            yield break;
+        }
+
+        // 3) 다시 로드할 타겟 결정(가능하면 활성 씬, 아니면 목록 첫 번째)
+        var activeScene = SceneManager.GetActiveScene();
+        Scene target = gameplayScenes.Contains(activeScene) ? activeScene : gameplayScenes[0];
+
+        string reloadName = target.name;
+        string reloadPath = target.path;
+    #if UNITY_EDITOR
+        bool inBuild = SceneUtility.GetBuildIndexByScenePath(reloadPath) >= 0;
+    #endif
+
+        // 4) 게임플레이 씬들만 언로드(UI 씬은 남김)
+        foreach (var sc in gameplayScenes)
+            yield return SceneManager.UnloadSceneAsync(sc);
+
+        // 5) 게임플레이 씬 하나만 애드티브 재로딩
+    #if UNITY_EDITOR
+        if (!inBuild && !string.IsNullOrEmpty(reloadPath))
+        {
+            var pars = new LoadSceneParameters(LoadSceneMode.Additive);
+            yield return EditorSceneManager.LoadSceneAsyncInPlayMode(reloadPath, pars);
+        }
+        else
+        {
+            yield return SceneManager.LoadSceneAsync(reloadName, LoadSceneMode.Additive);
+        }
+    #else
+        yield return SceneManager.LoadSceneAsync(reloadName, LoadSceneMode.Additive);
+    #endif
+
+        // 6) 활성 씬 지정 + 팝업 닫기
+        var reloaded = SceneManager.GetSceneByName(reloadName);
+        if (reloaded.IsValid()) SceneManager.SetActiveScene(reloaded);
+        Hide();
     }
-
-    // 2) Cache info BEFORE unload (Scene handle becomes invalid after unload)
-    var gameplayScene = lm.gameObject.scene;
-    string gameplayName = gameplayScene.name;   // e.g., "MakingScene" or "PlayScene"
-    string gameplayPath = gameplayScene.path;   // full asset path (Editor only)
-    bool gameplayValid = gameplayScene.IsValid();
-
-#if UNITY_EDITOR
-    // Is the scene in Build Settings?
-    int buildIndexByPath = UnityEngine.SceneManagement.SceneUtility.GetBuildIndexByScenePath(gameplayPath);
-    bool inBuild = buildIndexByPath >= 0;
-#else
-    bool inBuild = true; // at runtime you should only use scenes in build
-#endif
-
-    if (!gameplayValid || string.IsNullOrEmpty(gameplayName))
-    {
-        Debug.LogWarning("[ClearPopup] Gameplay scene info invalid; using active scene fallback.");
-        var active = SceneManager.GetActiveScene();
-        gameplayName = active.name;
-#if UNITY_EDITOR
-        gameplayPath = active.path;
-        inBuild = UnityEngine.SceneManagement.SceneUtility.GetBuildIndexByScenePath(gameplayPath) >= 0;
-#endif
-    }
-
-    // 3) Unload gameplay scene only (keep UI scene alive)
-    yield return SceneManager.UnloadSceneAsync(gameplayScene);
-
-    // 4) Reload gameplay scene additively
-#if UNITY_EDITOR
-    if (!inBuild && !string.IsNullOrEmpty(gameplayPath))
-    {
-        // Editor-only reload by path when the scene isn't in Build Settings
-        var pars = new LoadSceneParameters(LoadSceneMode.Additive);
-        yield return UnityEditor.SceneManagement.EditorSceneManager.LoadSceneAsyncInPlayMode(gameplayPath, pars);
-    }
-    else
-    {
-        yield return SceneManager.LoadSceneAsync(gameplayName, LoadSceneMode.Additive);
-    }
-#else
-    // Runtime: must be in Build Settings
-    yield return SceneManager.LoadSceneAsync(gameplayName, LoadSceneMode.Additive);
-#endif
-
-    // 5) Make the reloaded gameplay scene active
-    var reloaded = SceneManager.GetSceneByName(gameplayName);
-    if (reloaded.IsValid()) SceneManager.SetActiveScene(reloaded);
-
-    // 6) Hide popup
-    Hide();
-}
-
 }

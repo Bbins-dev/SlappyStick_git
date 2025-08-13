@@ -1,6 +1,7 @@
 // Assets/Scripts/Managers/LevelManager.cs
 using UnityEngine;
 using System.Collections.Generic;
+using UnityEngine.SceneManagement;
 
 public class LevelManager : MonoBehaviour
 {
@@ -19,6 +20,9 @@ public class LevelManager : MonoBehaviour
 #if UNITY_EDITOR
         DisableEditorPreviewsIfAny();   // 🔹 가장 먼저 프리뷰 비활성화
 #endif
+
+        EnsureDynamicRoot();
+
         LevelData data = null;
 
 #if UNITY_EDITOR
@@ -82,18 +86,14 @@ public class LevelManager : MonoBehaviour
                 BuildEntity(f, isStick: false, isObstacle: false);
         }
 
-        // 4) 카메라에 "초기 포커스=첫 타겟, 팔로우=스틱" 전달
-        var camFollow = Camera.main ? Camera.main.GetComponent<CameraFollow>() : null;
+            var cam = FindWorldCamera();
+        var camFollow = cam ? cam.GetComponent<CameraFollow>() : null;
         if (camFollow != null && stickGo != null)
         {
-
-            // ⬇️ 먼저 LevelData에 저장된 "카메라 최초 위치" 적용
             camFollow.ApplyInitial(data.cameraInitial);
-
-        // ⬇️ 그 다음, 기존대로 초기 포커스/팔로우 타깃 구성
             camFollow.ConfigureTargets(
-                firstTarget != null ? firstTarget : stickGo.transform, // initialTarget
-                stickGo.transform,                                     // follow target
+                firstTarget != null ? firstTarget : stickGo.transform,
+                stickGo.transform,
                 resetTimers: true
             );
         }
@@ -269,6 +269,42 @@ public class LevelManager : MonoBehaviour
         }
     }
 
+    // ─────────────────────────────────────────────────────────────
+    // DynamicRoot를 반드시 LevelManager의 자식 + 같은 씬으로 보장
+    // ─────────────────────────────────────────────────────────────
+    private void EnsureDynamicRoot()
+    {
+        // 1) 없으면 만들고 부모를 LevelManager로
+        if (dynamicRoot == null)
+        {
+            var go = new GameObject("DynamicRoot");
+            go.transform.SetParent(this.transform, false);      // ← 부모를 LvlMgr로!
+            dynamicRoot = go.transform;
+        }
+        else
+        {
+            // 있으면 부모 재설정(혹시 루트에 떠 있으면)
+            dynamicRoot.SetParent(this.transform, false);
+        }
+
+        // 2) 씬 일치 보장(다른 씬에 있으면 강제 이동)
+        var myScene = gameObject.scene;
+        if (dynamicRoot.gameObject.scene != myScene)
+            SceneManager.MoveGameObjectToScene(dynamicRoot.gameObject, myScene);
+
+        // 3) 자식 정리(런타임 스폰물 초기화)
+        for (int i = dynamicRoot.childCount - 1; i >= 0; i--)
+            Destroy(dynamicRoot.GetChild(i).gameObject);
+
+        // (선택) 같은 씬 루트에 떠 있는 ‘다른’ DynamicRoot가 있으면 정리
+        var roots = myScene.GetRootGameObjects();
+        foreach (var r in roots)
+        {
+            if (r != dynamicRoot.gameObject && r.name == "DynamicRoot")
+                Destroy(r); // 같은 씬의 떠다니는 잔재 제거
+        }
+    }
+
 #if UNITY_EDITOR
     /// <summary>
     /// Disable any editor preview containers/groups so they don't collide with runtime spawns.
@@ -312,7 +348,7 @@ public class LevelManager : MonoBehaviour
         }
     }
 #endif
-    
+
     public void ResetObstacles()
     {
         int count = 0;
@@ -324,5 +360,18 @@ public class LevelManager : MonoBehaviour
         }
         Debug.Log($"[LevelManager] ResetObstacles invoked: {count} items.");
     }
+    private Camera FindWorldCamera()
+    {
+        var cams = GameObject.FindObjectsOfType<Camera>(true);
+        foreach (var c in cams)
+        {
+            if (!c.enabled) continue;
+            // UI 카메라(마스크가 UI만인 카메라)는 제외
+            if (c.cullingMask == LayerMask.GetMask("UI")) continue;
+            return c;
+        }
+        return Camera.main; // 최후 보루
+    }
+    
 
 }
