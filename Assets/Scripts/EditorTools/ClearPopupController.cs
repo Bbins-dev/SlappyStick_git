@@ -159,24 +159,39 @@ public class ClearPopupController : MonoBehaviour
 
     public void OnClick_LevelSelect()
         {
+            // 팝업에서 나갈 때는 일시정지 해제
             Time.timeScale = 1f;
 
-        #if UNITY_EDITOR
-            // 씬 이름이 빌드에 없으면 경로로 로드(에디터 플레이 전용)
-            if (!IsSceneInBuild(levelSelectScene))
+            // 1) 현재 프로젝트에서 이미 정상 동작하는 SettingsUI 경로 재사용
+            var settings = FindObjectOfType<SettingsUI>(true);
+            if (settings != null)
             {
-                string path = FindScenePathByName(levelSelectScene);
-                if (!string.IsNullOrEmpty(path))
-                {
-                    var p = new LoadSceneParameters(LoadSceneMode.Single);
-                    UnityEditor.SceneManagement.EditorSceneManager.LoadSceneInPlayMode(path, p);
-                    return;
-                }
-                Debug.LogError($"[ClearPopup] Scene '{levelSelectScene}' not found in Build Settings or by path.");
+                settings.OnGoLevelSelect(); // 내부에서 SceneManager.LoadScene(...) 호출
+                return;
             }
-        #endif
 
-            UnityEngine.SceneManagement.SceneManager.LoadScene(levelSelectScene, LoadSceneMode.Single);
+            // 2) SettingsUI가 없으면, 필드 값으로 직접 로드 (빌드에서도 동작)
+            if (!string.IsNullOrEmpty(levelSelectScene))
+            {
+        #if UNITY_EDITOR
+                // 에디터에서 빌드목록에 없을 때도 경로로 로드 (편의)
+                if (!IsSceneInBuild(levelSelectScene))
+                {
+                    string path = FindScenePathByName(levelSelectScene);
+                    if (!string.IsNullOrEmpty(path))
+                    {
+                        var p = new UnityEngine.SceneManagement.LoadSceneParameters(LoadSceneMode.Single);
+                        UnityEditor.SceneManagement.EditorSceneManager.LoadSceneInPlayMode(path, p);
+                        return;
+                    }
+                }
+        #endif
+                UnityEngine.SceneManagement.SceneManager.LoadScene(levelSelectScene, LoadSceneMode.Single);
+            }
+            else
+            {
+                Debug.LogError("[ClearPopup] LevelSelect scene name is empty.");
+            }
         }
 
         #if UNITY_EDITOR
