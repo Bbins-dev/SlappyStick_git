@@ -5,6 +5,7 @@ using TMPro;
 using UnityEngine;
 using UnityEngine.SceneManagement;
 using UnityEngine.UI;
+using System.Reflection;
 
 #if UNITY_EDITOR
 using UnityEditor.SceneManagement; // EditorSceneManager
@@ -38,7 +39,7 @@ public class ClearPopupController : MonoBehaviour
     [Header("Pause")]
     [SerializeField] private bool pauseOnShow = true;
 
-    
+
 
     private Coroutine fxCo;
     private bool isShowing;
@@ -113,10 +114,10 @@ public class ClearPopupController : MonoBehaviour
         float t = 0f;
 
         float startA = canvasGroup.alpha;
-        float endA   = visible ? 1f : 0f;
+        float endA = visible ? 1f : 0f;
 
         Vector3 startS = transform.localScale;
-        Vector3 endS   = Vector3.one * (visible ? showScale : hideScale);
+        Vector3 endS = Vector3.one * (visible ? showScale : hideScale);
 
         while (t < dur)
         {
@@ -131,7 +132,7 @@ public class ClearPopupController : MonoBehaviour
         canvasGroup.alpha = endA;
         transform.localScale = endS;
 
-        canvasGroup.interactable   = visible;
+        canvasGroup.interactable = visible;
         canvasGroup.blocksRaycasts = visible;
     }
 
@@ -146,7 +147,7 @@ public class ClearPopupController : MonoBehaviour
         if (gm != null)
         {
             int next = gm.CurrentLevel + 1;
-            bool exists   = next <= Mathf.Max(1, gm.TotalLevels);
+            bool exists = next <= Mathf.Max(1, gm.TotalLevels);
             bool unlocked = next <= Mathf.Max(1, gm.highestUnlockedLevel);
             canNext = exists && unlocked;
         }
@@ -173,65 +174,65 @@ public class ClearPopupController : MonoBehaviour
     }
 
     public void OnClick_LevelSelect()
+    {
+        ReplayManager.Instance?.TryDeleteCache(); // ★ 캐시 제거
+
+        // 팝업에서 나갈 때는 일시정지 해제
+        Time.timeScale = 1f;
+
+        // 1) 현재 프로젝트에서 이미 정상 동작하는 SettingsUI 경로 재사용
+        var settings = FindObjectOfType<SettingsUI>(true);
+        if (settings != null)
         {
-            ReplayManager.Instance?.TryDeleteCache(); // ★ 캐시 제거
+            settings.OnGoLevelSelect(); // 내부에서 SceneManager.LoadScene(...) 호출
+            return;
+        }
 
-            // 팝업에서 나갈 때는 일시정지 해제
-            Time.timeScale = 1f;
-
-            // 1) 현재 프로젝트에서 이미 정상 동작하는 SettingsUI 경로 재사용
-            var settings = FindObjectOfType<SettingsUI>(true);
-            if (settings != null)
+        // 2) SettingsUI가 없으면, 필드 값으로 직접 로드 (빌드에서도 동작)
+        if (!string.IsNullOrEmpty(levelSelectScene))
+        {
+#if UNITY_EDITOR
+            // 에디터에서 빌드목록에 없을 때도 경로로 로드 (편의)
+            if (!IsSceneInBuild(levelSelectScene))
             {
-                settings.OnGoLevelSelect(); // 내부에서 SceneManager.LoadScene(...) 호출
-                return;
-            }
-
-            // 2) SettingsUI가 없으면, 필드 값으로 직접 로드 (빌드에서도 동작)
-            if (!string.IsNullOrEmpty(levelSelectScene))
-            {
-        #if UNITY_EDITOR
-                // 에디터에서 빌드목록에 없을 때도 경로로 로드 (편의)
-                if (!IsSceneInBuild(levelSelectScene))
+                string path = FindScenePathByName(levelSelectScene);
+                if (!string.IsNullOrEmpty(path))
                 {
-                    string path = FindScenePathByName(levelSelectScene);
-                    if (!string.IsNullOrEmpty(path))
-                    {
-                        var p = new UnityEngine.SceneManagement.LoadSceneParameters(LoadSceneMode.Single);
-                        UnityEditor.SceneManagement.EditorSceneManager.LoadSceneInPlayMode(path, p);
-                        return;
-                    }
+                    var p = new UnityEngine.SceneManagement.LoadSceneParameters(LoadSceneMode.Single);
+                    UnityEditor.SceneManagement.EditorSceneManager.LoadSceneInPlayMode(path, p);
+                    return;
                 }
-        #endif
-                UnityEngine.SceneManagement.SceneManager.LoadScene(levelSelectScene, LoadSceneMode.Single);
             }
-            else
-            {
-                Debug.LogError("[ClearPopup] LevelSelect scene name is empty.");
-            }
+#endif
+            UnityEngine.SceneManagement.SceneManager.LoadScene(levelSelectScene, LoadSceneMode.Single);
         }
-
-        #if UNITY_EDITOR
-        private static bool IsSceneInBuild(string sceneName)
+        else
         {
-            foreach (var s in UnityEditor.EditorBuildSettings.scenes)
-                if (System.IO.Path.GetFileNameWithoutExtension(s.path) == sceneName)
-                    return true;
-            return false;
+            Debug.LogError("[ClearPopup] LevelSelect scene name is empty.");
         }
+    }
 
-        private static string FindScenePathByName(string sceneName)
+#if UNITY_EDITOR
+    private static bool IsSceneInBuild(string sceneName)
+    {
+        foreach (var s in UnityEditor.EditorBuildSettings.scenes)
+            if (System.IO.Path.GetFileNameWithoutExtension(s.path) == sceneName)
+                return true;
+        return false;
+    }
+
+    private static string FindScenePathByName(string sceneName)
+    {
+        var guids = UnityEditor.AssetDatabase.FindAssets($"t:Scene {sceneName}");
+        foreach (var g in guids)
         {
-            var guids = UnityEditor.AssetDatabase.FindAssets($"t:Scene {sceneName}");
-            foreach (var g in guids)
-            {
-                string p = UnityEditor.AssetDatabase.GUIDToAssetPath(g);
-                if (System.IO.Path.GetFileNameWithoutExtension(p) == sceneName)
-                    return p;
-            }
-            return null;
+            string p = UnityEditor.AssetDatabase.GUIDToAssetPath(g);
+            if (System.IO.Path.GetFileNameWithoutExtension(p) == sceneName)
+                return p;
         }
-        #endif
+        return null;
+    }
+#endif
 
     public void OnClick_NextLevel()
     {
@@ -241,7 +242,7 @@ public class ClearPopupController : MonoBehaviour
         if (gm == null) return;
 
         int next = gm.CurrentLevel + 1;
-        bool exists   = next <= Mathf.Max(1, gm.TotalLevels);
+        bool exists = next <= Mathf.Max(1, gm.TotalLevels);
         bool unlocked = next <= Mathf.Max(1, gm.highestUnlockedLevel);
 
         if (exists && unlocked)
@@ -251,41 +252,62 @@ public class ClearPopupController : MonoBehaviour
         }
         // else: locked → button is already disabled
     }
-    
-    public void OnClick_PlayReplay()
-{
-    // 팝업을 잠깐 닫아 시야/입력/타임스케일 정상화
-    Hide(); // pauseOnShow=true면 여기서 Time.timeScale=1로 복귀
 
-    var player = FindObjectOfType<ReplayPlayer>(true);
-    if (player == null)
+    public void OnClick_PlayReplay()
     {
-        var go = new GameObject("ReplayPlayer");
-        player = go.AddComponent<ReplayPlayer>();
-        DontDestroyOnLoad(go);
+        // 팝업을 잠깐 닫아 시야/입력/타임스케일 정상화
+        Hide(); // pauseOnShow=true면 여기서 Time.timeScale=1로 복귀
+
+        var player = FindObjectOfType<ReplayPlayer>(true);
+        if (player == null)
+        {
+            var go = new GameObject("ReplayPlayer");
+            player = go.AddComponent<ReplayPlayer>();
+            DontDestroyOnLoad(go);
+        }
+
+        // 재생 끝나면 팝업 다시 열어서 일시정지 복원 + 버튼들 접근 가능하게
+        player.PlayCached(() =>
+        {
+            Show(); // 다시 Pause 상태로 팝업 복귀
+        });
     }
 
-    // 재생 끝나면 팝업 다시 열어서 일시정지 복원 + 버튼들 접근 가능하게
-    player.PlayCached(() =>
-    {
-        Show(); // 다시 Pause 상태로 팝업 복귀
-    });
-}
-    
     public void OnClick_SaveReplay()
     {
+        // 1) 캐시 파일 존재 확인
         var src = ReplayManager.CacheFilePath;
         if (!System.IO.File.Exists(src))
         {
             Debug.LogWarning("[Replay] No cached file to save.");
             return;
         }
-        var dstDir = Application.persistentDataPath; // 영구 저장소
-        var dst = System.IO.Path.Combine(dstDir, $"StickIt_Replay_{System.DateTime.Now:yyyyMMdd_HHmmss}.replay");
+
+        // 2) 고유 파일명 만들기 (중복 방지)
+        string dstDir = Application.persistentDataPath;
+        string fileName = $"StickIt_Replay_{System.DateTime.Now:yyyyMMdd_HHmmss_fff}.replay";
+        string dst = System.IO.Path.Combine(dstDir, fileName);
+        dst = MakeUniquePath(dst); // ← 아래 헬퍼
+
         try
         {
             System.IO.File.Copy(src, dst, overwrite: false);
             Debug.Log($"[Replay] Saved: {dst}");
+
+            // 3) 가능한 경우 공유(모바일에서 특히 유용)
+            if (!TryShareFile(dst, "application/octet-stream"))
+            {
+#if UNITY_EDITOR
+                // 에디터에선 폴더 열어주기
+                UnityEditor.EditorUtility.RevealInFinder(dst);
+#elif UNITY_STANDALONE
+                // PC/Mac 플레이어에선 폴더 열기
+                OpenFolder(System.IO.Path.GetDirectoryName(dst));
+#else
+                // 모바일에서 플러그인 없으면 경로만 로그
+                Debug.Log($"[Replay] Saved to: {dst}");
+#endif
+            }
         }
         catch (System.Exception e)
         {
@@ -375,7 +397,7 @@ public class ClearPopupController : MonoBehaviour
 
         var cams = Camera.allCameras;
         int uiLayer = LayerMask.NameToLayer("UI");
-        int uiMask  = uiLayer >= 0 ? (1 << uiLayer) : 0;
+        int uiMask = uiLayer >= 0 ? (1 << uiLayer) : 0;
 
         foreach (var c in cams)
         {
@@ -429,16 +451,16 @@ public class ClearPopupController : MonoBehaviour
 
         string reloadName = target.name;
         string reloadPath = target.path;
-    #if UNITY_EDITOR
+#if UNITY_EDITOR
         bool inBuild = SceneUtility.GetBuildIndexByScenePath(reloadPath) >= 0;
-    #endif
+#endif
 
         // 4) 게임플레이 씬들만 언로드(UI 씬은 남김)
         foreach (var sc in gameplayScenes)
             yield return SceneManager.UnloadSceneAsync(sc);
 
         // 5) 게임플레이 씬 하나만 애드티브 재로딩
-    #if UNITY_EDITOR
+#if UNITY_EDITOR
         if (!inBuild && !string.IsNullOrEmpty(reloadPath))
         {
             var pars = new LoadSceneParameters(LoadSceneMode.Additive);
@@ -448,13 +470,93 @@ public class ClearPopupController : MonoBehaviour
         {
             yield return SceneManager.LoadSceneAsync(reloadName, LoadSceneMode.Additive);
         }
-    #else
+#else
         yield return SceneManager.LoadSceneAsync(reloadName, LoadSceneMode.Additive);
-    #endif
+#endif
 
         // 6) 활성 씬 지정 + 팝업 닫기
         var reloaded = SceneManager.GetSceneByName(reloadName);
         if (reloaded.IsValid()) SceneManager.SetActiveScene(reloaded);
         Hide();
+    }
+
+    private static string MakeUniquePath(string path)
+    {
+        if (!System.IO.File.Exists(path)) return path;
+        string dir = System.IO.Path.GetDirectoryName(path);
+        string name = System.IO.Path.GetFileNameWithoutExtension(path);
+        string ext = System.IO.Path.GetExtension(path);
+        int i = 2;
+        string candidate;
+        do
+        {
+            candidate = System.IO.Path.Combine(dir, $"{name} ({i}){ext}");
+            i++;
+        } while (System.IO.File.Exists(candidate));
+        return candidate;
+    }
+
+    private static void OpenFolder(string directoryPath)
+    {
+        if (string.IsNullOrEmpty(directoryPath)) return;
+#if UNITY_STANDALONE_OSX
+        System.Diagnostics.Process.Start("open", directoryPath);
+#elif UNITY_STANDALONE_WIN
+        System.Diagnostics.Process.Start("explorer.exe", directoryPath.Replace("/", "\\"));
+#else
+        Application.OpenURL("file://" + directoryPath);
+#endif
+    }
+    
+    private static bool TryShareFile(string path, string mime)
+    {
+        // (A) NativeShare 플러그인이 프로젝트에 있으면 사용
+        //     https://github.com/yasirkula/UnityNativeShare  (무료)
+        var nsType = System.Type.GetType("NativeShare,Assembly-CSharp");
+        if (nsType == null) nsType = System.Type.GetType("NativeShare"); // 일부 프로젝트명 환경 대비
+        if (nsType != null)
+        {
+            try
+            {
+                object ns = System.Activator.CreateInstance(nsType);
+                // 체이닝 메서드 리플렉션 (AddFile → SetSubject → SetText → SetMime → Share)
+                object current = ns;
+
+                MethodInfo AddFile     = nsType.GetMethod("AddFile");
+                MethodInfo SetSubject  = nsType.GetMethod("SetSubject");
+                MethodInfo SetText     = nsType.GetMethod("SetText");
+                MethodInfo SetCallback = nsType.GetMethod("SetCallback"); // 선택
+                MethodInfo SetTarget   = nsType.GetMethod("SetTarget");   // 선택
+                MethodInfo Share       = nsType.GetMethod("Share");
+                MethodInfo SetMime     = nsType.GetMethod("SetMime");     // 최신 버전에 있음
+
+                if (AddFile != null)    current = AddFile.Invoke(current, new object[] { path });
+                if (SetMime != null)     current = SetMime.Invoke(current, new object[] { mime });
+                if (SetSubject != null)  current = SetSubject.Invoke(current, new object[] { "Stick It! Replay" });
+                if (SetText != null)     current = SetText.Invoke(current, new object[] { "Recently recorded replay file." });
+                if (Share != null)       Share.Invoke(current, null);
+
+                Debug.Log("[Replay] Share sheet opened via NativeShare.");
+                return true;
+            }
+            catch (System.Exception e)
+            {
+                Debug.LogWarning($"[Replay] NativeShare reflection failed: {e.Message}");
+                // 폴백으로 내려감
+            }
+        }
+
+    #if UNITY_ANDROID
+        // (B) 안드로이드: 플러그인 없이 공유 인텐트 직접 띄우는 건
+        //     Android 7+ 부터 FileUriExposed 예외/권한 문제가 많아 비권장.
+        //     플러그인 권장(위 NativeShare). 여기선 false 반환해 폴백 처리.
+        return false;
+    #elif UNITY_IOS
+        // (C) iOS: 마찬가지로 UIActivityViewController는 네이티브 플러그인 필요.
+        return false;
+    #else
+        // (D) PC/Mac: 공유 시트 개념이 표준이 아님 → false
+        return false;
+    #endif
     }
 }
