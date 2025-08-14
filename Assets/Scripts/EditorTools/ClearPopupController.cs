@@ -30,11 +30,13 @@ public class ClearPopupController : MonoBehaviour
     [SerializeField] private Selectable firstSelected;
 
     [Header("Scenes")]
-    [Tooltip("Scene name for the Level Select screen (single load).")]
-    public string levelSelectScene = "LevelSelect";
+    [Tooltip("Scene name for the Level Select Scene screen (single load).")]
+    public string levelSelectScene = "LevelSelectScene";
 
     [Header("Pause")]
     [SerializeField] private bool pauseOnShow = true;
+
+    
 
     private Coroutine fxCo;
     private bool isShowing;
@@ -151,18 +153,53 @@ public class ClearPopupController : MonoBehaviour
     // ─────────────────────────────────────────────────────────────────────────
     // Button handlers
     // ─────────────────────────────────────────────────────────────────────────
-    public void OnClick_SaveScreenshot() { StartCoroutine(CaptureWorldWithoutUI()); }
+    public void OnClick_SaveScreenshot() { StartCoroutine(CaptureWorldOffscreenAndKeepPopup()); }
 
     public void OnClick_RestartLevel()   { StartCoroutine(RestartGameplaySceneKeepUI()); }
 
     public void OnClick_LevelSelect()
-    {
-        Time.timeScale = 1f;
-        if (!string.IsNullOrEmpty(levelSelectScene))
-            SceneManager.LoadScene(levelSelectScene, LoadSceneMode.Single);
-        else
-            Debug.LogWarning("[ClearPopup] LevelSelect scene name is empty.");
-    }
+        {
+            Time.timeScale = 1f;
+
+        #if UNITY_EDITOR
+            // 씬 이름이 빌드에 없으면 경로로 로드(에디터 플레이 전용)
+            if (!IsSceneInBuild(levelSelectScene))
+            {
+                string path = FindScenePathByName(levelSelectScene);
+                if (!string.IsNullOrEmpty(path))
+                {
+                    var p = new LoadSceneParameters(LoadSceneMode.Single);
+                    UnityEditor.SceneManagement.EditorSceneManager.LoadSceneInPlayMode(path, p);
+                    return;
+                }
+                Debug.LogError($"[ClearPopup] Scene '{levelSelectScene}' not found in Build Settings or by path.");
+            }
+        #endif
+
+            UnityEngine.SceneManagement.SceneManager.LoadScene(levelSelectScene, LoadSceneMode.Single);
+        }
+
+        #if UNITY_EDITOR
+        private static bool IsSceneInBuild(string sceneName)
+        {
+            foreach (var s in UnityEditor.EditorBuildSettings.scenes)
+                if (System.IO.Path.GetFileNameWithoutExtension(s.path) == sceneName)
+                    return true;
+            return false;
+        }
+
+        private static string FindScenePathByName(string sceneName)
+        {
+            var guids = UnityEditor.AssetDatabase.FindAssets($"t:Scene {sceneName}");
+            foreach (var g in guids)
+            {
+                string p = UnityEditor.AssetDatabase.GUIDToAssetPath(g);
+                if (System.IO.Path.GetFileNameWithoutExtension(p) == sceneName)
+                    return p;
+            }
+            return null;
+        }
+        #endif
 
     public void OnClick_NextLevel()
     {
@@ -184,28 +221,97 @@ public class ClearPopupController : MonoBehaviour
     // ─────────────────────────────────────────────────────────────────────────
     // Helpers
     // ─────────────────────────────────────────────────────────────────────────
-    private IEnumerator CaptureWorldWithoutUI()
+    private IEnumerator CaptureWorldOffscreenAndKeepPopup()
     {
-        var canvases = GameObject.FindObjectsOfType<Canvas>(true);
-        var prev = new bool[canvases.Length];
-        for (int i = 0; i < canvases.Length; i++)
+        // 팝업은 그대로 둔 채, 월드만 렌더텍스처로 캡처
+        yield return new WaitForEndOfFrame(); // timeScale=0에서도 OK
+
+        var cam = FindWorldCamera();
+        if (cam == null)
         {
-            prev[i] = canvases[i].enabled;
-            canvases[i].enabled = false;
+            Debug.LogWarning("[ClearPopup] No world camera found to capture.");
+            yield break;
         }
 
-        yield return new WaitForEndOfFrame();
+        int width  = Screen.width;
+        int height = Screen.height;
 
-        string dir = Application.persistentDataPath;
-        string path = Path.Combine(dir, $"StickIt_{System.DateTime.Now:yyyyMMdd_HHmmss}.png");
-        ScreenCapture.CaptureScreenshot(path);
-        Debug.Log($"[ClearPopup] Screenshot saved: {path}");
+        // UI 레이어 제외(Overlay는 어차피 안 찍히지만, Camera 모드 캔버스 대비용)
+        int uiLayer = LayerMask.NameToLayer("UI");
+        int uiMask  = uiLayer >= 0 ? (1 << uiLayer) : 0;
+        int oldMask = cam.cullingMask;
+        var oldTarget = cam.targetTexture;
 
-        yield return new WaitForSecondsRealtime(0.2f);
+        RenderTexture rt = null;
+        Texture2D tex = null;
 
-        for (int i = 0; i < canvases.Length; i++)
-            if (canvases[i] != null) canvases[i].enabled = prev[i];
+        try
+        {
+            cam.cullingMask = oldMask & ~uiMask;
+
+            rt = new RenderTexture(width, height, 24, RenderTextureFormat.ARGB32);
+            rt.Create();
+
+            cam.targetTexture = rt;
+            cam.Render(); // 월드만 RT에 렌더
+
+            RenderTexture.active = rt;
+            tex = new Texture2D(width, height, TextureFormat.RGB24, false);
+            tex.ReadPixels(new Rect(0, 0, width, height), 0, 0);
+            tex.Apply();
+
+            string dir = Application.persistentDataPath;
+            string path = System.IO.Path.Combine(dir, $"StickIt_{System.DateTime.Now:yyyyMMdd_HHmmss}.png");
+            System.IO.File.WriteAllBytes(path, tex.EncodeToPNG());
+            Debug.Log($"[ClearPopup] Screenshot saved: {path}");
+        }
+        finally
+        {
+            cam.cullingMask   = oldMask;
+            cam.targetTexture = oldTarget;
+            RenderTexture.active = null;
+            if (rt)  rt.Release();
+            if (rt)  Destroy(rt);
+            if (tex) Destroy(tex);
+        }
+
+        // 안전망: 혹시 팝업이 닫혔다면 강제로 다시 열기
+        if (!isShowing)
+        {
+            isShowing = false;   // guard 우회
+            Show();
+        }
+        else
+        {
+            // 보이는 상태라면 인터랙션만 확실히 살려둠
+            if (canvasGroup)
+            {
+                canvasGroup.alpha = 1f;
+                canvasGroup.interactable = true;
+                canvasGroup.blocksRaycasts = true;
+            }
+        }
     }
+
+    // 월드 카메라 찾기(메인 우선, 없으면 UI만 안 그리는 첫 카메라)
+    private Camera FindWorldCamera()
+    {
+        if (Camera.main != null) return Camera.main;
+
+        var cams = Camera.allCameras;
+        int uiLayer = LayerMask.NameToLayer("UI");
+        int uiMask  = uiLayer >= 0 ? (1 << uiLayer) : 0;
+
+        foreach (var c in cams)
+        {
+            if (!c || !c.enabled) continue;
+            // UI만 그리는 카메라가 아니면 월드 카메라로 간주
+            if (uiMask == 0 || (c.cullingMask & ~uiMask) != 0)
+                return c;
+        }
+        return null;
+    }
+
 
     /// <summary>
     /// Reload gameplay scene(s) while keeping UI scene alive.
