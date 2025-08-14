@@ -3,6 +3,7 @@ using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
 using UnityEngine.SceneManagement;
+using System;
 
 [AddComponentMenu("StickIt/Replay Player")]
 public class ReplayPlayer : MonoBehaviour
@@ -13,13 +14,23 @@ public class ReplayPlayer : MonoBehaviour
     private readonly List<Transform> boundTargets = new();
     private readonly List<Rigidbody2D> disabledBodies = new();
 
-    private ReplayData data;     // trackCount, step, paths[], pos[], rotZ[]
+    private ReplayData data;             // trackCount, step, paths[], pos[], rotZ[]
     private bool isPlaying;
+
+    // 카메라 핸들/복구 정보
+    private CameraFollow camFollow;
+    private Transform restoreFollow;     // 원래 Stick
+    private Transform restoreInitial;    // 원래 첫 Target (없으면 Stick)
+
+    private Action finishedCallback;     // 재생 끝나면 호출
 
     public bool IsPlaying => isPlaying;
     public bool HasCachedReplay => System.IO.File.Exists(ReplayManager.CacheFilePath);
 
-    public void PlayCached()
+    /// <summary>
+    /// Play cached replay. When finished, invokes onFinished (optional).
+    /// </summary>
+    public void PlayCached(Action onFinished = null)
     {
         if (isPlaying) return;
 
@@ -36,7 +47,15 @@ public class ReplayPlayer : MonoBehaviour
             return;
         }
 
+        finishedCallback = onFinished;
+
         BindTargetsToPaths();
+        PrepareCameraFollowTakeover();      // ← 카메라 팔로우 인계
+
+        // 카메라가 리플레이 동안엔 초기/포지셔닝 연출 없이 바로 타겟만 따라가게
+        var camFollow = Camera.main ? Camera.main.GetComponent<CameraFollow>() : null;
+        camFollow?.SetReplayOverride(true, FindStickTarget());  // 아래 B에서 헬퍼 추가
+
         StartCoroutine(CoPlay());
     }
 
@@ -47,13 +66,11 @@ public class ReplayPlayer : MonoBehaviour
 
         int framesByPos = d.pos.Length / d.trackCount;
         int framesByRot = d.rotZ.Length / d.trackCount;
-
         if (framesByPos <= 0 || framesByRot <= 0 || framesByPos != framesByRot) return false;
 
         if (d.paths == null || d.paths.Length < d.trackCount)
         {
             Debug.LogWarning($"[Replay] paths count {d.paths?.Length ?? 0} < trackCount {d.trackCount}. Missing names will use ghosts.");
-            // 허용하되, 부족한 트랙은 고스트 GO로 채움
         }
         return true;
     }
@@ -83,7 +100,7 @@ public class ReplayPlayer : MonoBehaviour
         var existing = GameObject.Find("ReplayGhosts");
         if (existing) return existing.transform;
         var root = new GameObject("ReplayGhosts");
-        Object.DontDestroyOnLoad(root);
+        DontDestroyOnLoad(root);
         return root.transform;
     }
 
@@ -91,7 +108,7 @@ public class ReplayPlayer : MonoBehaviour
     {
         if (string.IsNullOrEmpty(fullPath)) return null;
 
-        // 메인 카메라 특별 케이스
+        // 메인 카메라 특례
         if (fullPath.EndsWith("Main Camera") && Camera.main)
             return Camera.main.transform;
 
@@ -123,11 +140,42 @@ public class ReplayPlayer : MonoBehaviour
         return null;
     }
 
+    private void PrepareCameraFollowTakeover()
+    {
+        // 카메라 핸들
+        camFollow = Camera.main ? Camera.main.GetComponent<CameraFollow>() : null;
+        if (camFollow == null) return;
+
+        // 복구용 원래 타깃들
+        restoreFollow = FindCurrentStick();
+        restoreInitial = FindFirstTarget() ?? restoreFollow;
+
+        // 리플레이 대상(대개 0번 트랙)을 초기/팔로우 모두로 설정 → 실제 플레이와 동일한 팔로우 로직/속도 사용
+        var replayTarget = boundTargets.Count > 0 ? boundTargets[0] : null;
+        if (replayTarget != null)
+        {
+            camFollow.ConfigureTargets(replayTarget, replayTarget, resetTimers: true);
+        }
+    }
+
+    private Transform FindCurrentStick()
+    {
+        var sm = GameObject.FindObjectOfType<StickMove>();
+        return sm ? sm.transform : null;
+    }
+
+    private Transform FindFirstTarget()
+    {
+        // 가장 간단한 방법: Tag "Target" 중 첫 번째
+        var go = GameObject.FindWithTag("Target");
+        return go ? go.transform : null;
+    }
+
     private IEnumerator CoPlay()
     {
         isPlaying = true;
 
-        // 물리 잠깐 비활성
+        // 물리 비활성
         disabledBodies.Clear();
         foreach (var t in boundTargets)
         {
@@ -148,7 +196,7 @@ public class ReplayPlayer : MonoBehaviour
             hudToRestore.SetActive(false);
         }
 
-        // 재생 루프 (frameCount 계산)
+        // 재생
         float step = Mathf.Max(0.0001f, data.step);
         int tracks = data.trackCount;
         int frameCount = data.pos.Length / tracks;
@@ -170,7 +218,7 @@ public class ReplayPlayer : MonoBehaviour
             yield return new WaitForSecondsRealtime(step);
         }
 
-        // 복구
+        // 복구: 물리
         for (int i = 0; i < disabledBodies.Count; i++)
         {
             var rb = disabledBodies[i];
@@ -178,8 +226,35 @@ public class ReplayPlayer : MonoBehaviour
         }
         disabledBodies.Clear();
 
+        // 복구: HUD
         if (hudToRestore) hudToRestore.SetActive(true);
 
+        // 복구: 카메라 팔로우 (원래 Stick/Target로)
+        if (camFollow != null)
+        {
+            var stick = restoreFollow ?? FindCurrentStick();
+            var init = restoreInitial ?? FindFirstTarget() ?? stick;
+            if (stick != null)
+                camFollow.ConfigureTargets(init, stick, resetTimers: true);
+        }
+
+        Camera.main?.GetComponent<CameraFollow>()?.SetReplayOverride(false);
+
         isPlaying = false;
+
+        // 콜백 알림 (팝업 다시 열기 등)
+        finishedCallback?.Invoke();
+        finishedCallback = null;
+    }
+    
+    private Transform FindStickTarget()
+    {
+        // 녹화 트랙 중 StickMove가 붙은 트랜스폼을 우선 사용
+        foreach (var t in boundTargets)
+            if (t && t.GetComponent<StickMove>() != null)
+                return t;
+
+        // 못 찾으면 첫 트랙으로 폴백
+        return boundTargets.Count > 0 ? boundTargets[0] : null;
     }
 }

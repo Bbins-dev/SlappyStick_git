@@ -252,6 +252,26 @@ public class ClearPopupController : MonoBehaviour
         // else: locked → button is already disabled
     }
     
+    public void OnClick_PlayReplay()
+{
+    // 팝업을 잠깐 닫아 시야/입력/타임스케일 정상화
+    Hide(); // pauseOnShow=true면 여기서 Time.timeScale=1로 복귀
+
+    var player = FindObjectOfType<ReplayPlayer>(true);
+    if (player == null)
+    {
+        var go = new GameObject("ReplayPlayer");
+        player = go.AddComponent<ReplayPlayer>();
+        DontDestroyOnLoad(go);
+    }
+
+    // 재생 끝나면 팝업 다시 열어서 일시정지 복원 + 버튼들 접근 가능하게
+    player.PlayCached(() =>
+    {
+        Show(); // 다시 Pause 상태로 팝업 복귀
+    });
+}
+    
     public void OnClick_SaveReplay()
     {
         var src = ReplayManager.CacheFilePath;
@@ -264,31 +284,13 @@ public class ClearPopupController : MonoBehaviour
         var dst = System.IO.Path.Combine(dstDir, $"StickIt_Replay_{System.DateTime.Now:yyyyMMdd_HHmmss}.replay");
         try
         {
-            System.IO.File.Copy(src, dst, overwrite:false);
+            System.IO.File.Copy(src, dst, overwrite: false);
             Debug.Log($"[Replay] Saved: {dst}");
         }
         catch (System.Exception e)
         {
             Debug.LogWarning($"[Replay] Save failed: {e.Message}");
         }
-    }
-
-    public void OnClick_PlayReplay()
-    {
-        var player = FindObjectOfType<ReplayPlayer>(true);
-        if (player == null)
-        {
-            // 없으면 UI 씬 어딘가에 동적 생성
-            var go = new GameObject("ReplayPlayer");
-            player = go.AddComponent<ReplayPlayer>();
-            DontDestroyOnLoad(go);
-        }
-        if (!player.HasCachedReplay)
-        {
-            Debug.LogWarning("[Replay] No cached replay to play.");
-            return;
-        }
-        player.PlayCached();
     }
 
     // ─────────────────────────────────────────────────────────────────────────

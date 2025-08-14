@@ -2,6 +2,16 @@ using UnityEngine;
 
 public class CameraFollow : MonoBehaviour
 {
+    // Replay override (follow-only while replaying)
+    [Header("Replay Override")]
+
+    // ▶ 리플레이 중에는 초기연출/포지셔닝 캠 로직을 끄기 위한 스위치
+    [SerializeField] private bool replayOverride = false;
+    private Transform savedInitialTarget;
+    private Transform savedFollowTarget;
+    private float savedInitialTimer;
+    private bool savedHasReachedPositionCam;
+
     [Header("Initial Focus Settings")]
     [Tooltip("Camera will focus on this Transform first")]
     public Transform initialTarget;
@@ -66,6 +76,25 @@ public class CameraFollow : MonoBehaviour
     void LateUpdate()
     {
         if (target == null) TryAutoBindTargets();
+
+        // REPLAY OVERRIDE: follow only (skip initial focus & positioning cam)
+        if (replayOverride)
+        {
+            if (target == null) return;
+
+            // Follow (same smoothing/offset as normal play)
+            var replayFollowPos = new Vector3(
+                target.position.x + offset.x,
+                target.position.y + offset.y,
+                transform.position.z);
+            transform.position = Vector3.Lerp(transform.position, replayFollowPos, followSmoothSpeed * Time.deltaTime);
+
+            // Zoom (same rule as normal play)
+            var replayHeightDelta = target.position.y - targetStartY;
+            var replayDesiredSize = baseOrthographicSize + Mathf.Max(0f, replayHeightDelta) * zoomFactor;
+            cam.orthographicSize = Mathf.Lerp(cam.orthographicSize, replayDesiredSize, zoomSmoothSpeed * Time.deltaTime);
+            return; // 초기/포지셔닝 로직 전체 스킵
+        }
 
         // 1) Initial Focus Phase
         if (initialTimer > 0f)
@@ -142,7 +171,7 @@ public class CameraFollow : MonoBehaviour
         initialTarget = initial;               // 1) 먼저 초기 포커스 대상 지정 (예: 첫 번째 Target)
         SetFollowTarget(follow, resetTimers);  // 2) 그 다음 스틱을 팔로우 대상으로
     }
-    
+
     public void ApplyInitial(LevelData.CameraInitData init)
     {
         var cam = GetComponent<Camera>();
@@ -155,6 +184,51 @@ public class CameraFollow : MonoBehaviour
                 cam.orthographicSize = init.orthographicSize;
             else if (!cam.orthographic && init.fieldOfView > 0f)
                 cam.fieldOfView = init.fieldOfView;
+        }
+    }
+
+    public void EnterReplayOverride(Transform followTarget)
+    {
+        if (followTarget == null) return;
+
+        // save state
+        savedInitialTarget = initialTarget;
+        savedFollowTarget = target;
+        savedInitialTimer = initialTimer;
+        savedHasReachedPositionCam = hasReachedPositionCam;
+
+        // enable override
+        replayOverride = true;
+
+        // kill initial/positioning sequences
+        initialTimer = 0f;
+        hasReachedPositionCam = true;
+
+        // lock follow to the replay target (no timer reset)
+        SetFollowTarget(followTarget, resetTimers: false);
+    }
+
+    public void ExitReplayOverride(Transform restoreInitial, Transform restoreFollow)
+    {
+        // disable override
+        replayOverride = false;
+
+        // restore targets (prefer args; fallback to saved)
+        var init = restoreInitial != null ? restoreInitial : savedInitialTarget;
+        var foll = restoreFollow != null ? restoreFollow : savedFollowTarget;
+
+        if (foll != null)
+            ConfigureTargets(init != null ? init : foll, foll, resetTimers: true);
+    }
+    
+    // ▶ 리플레이가 시작/종료될 때 호출 (followOverride가 있으면 그걸 타겟으로 바로 팔로우)
+    public void SetReplayOverride(bool enabled, Transform followOverride = null)
+    {
+        replayOverride = enabled;
+        if (enabled && followOverride != null)
+        {
+            // 초기 연출/포지셔닝 타이머 초기화 없이 즉시 따라가도록
+            SetFollowTarget(followOverride, resetTimers: false);
         }
     }
 }
