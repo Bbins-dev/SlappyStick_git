@@ -22,6 +22,8 @@ public class ClearPopupController : MonoBehaviour
     [SerializeField] private Button btnLevelSelect;
     [SerializeField] private Button btnNextLevel;
     [SerializeField] private TextMeshProUGUI nextLevelLabel;   // child label of Btn_NextLevel
+    [SerializeField] private Button btnPlayReplay;
+    [SerializeField] private Button btnSaveReplay;
 
     [Header("Show/Hide FX")]
     [SerializeField] private float tweenDuration = 0.25f;
@@ -58,17 +60,20 @@ public class ClearPopupController : MonoBehaviour
     private void AutoWireButtons()
     {
         btnSaveScreenshot ??= transform.Find("Btn_SaveScreenshot")?.GetComponent<Button>();
-        btnRestart       ??= transform.Find("Btn_Restart")?.GetComponent<Button>();
-        btnLevelSelect   ??= transform.Find("Btn_LevelSelect")?.GetComponent<Button>();
-        btnNextLevel     ??= transform.Find("Btn_NextLevel")?.GetComponent<Button>();
+        btnRestart ??= transform.Find("Btn_Restart")?.GetComponent<Button>();
+        btnLevelSelect ??= transform.Find("Btn_LevelSelect")?.GetComponent<Button>();
+        btnNextLevel ??= transform.Find("Btn_NextLevel")?.GetComponent<Button>();
         if (btnNextLevel && !nextLevelLabel)
             nextLevelLabel = btnNextLevel.GetComponentInChildren<TextMeshProUGUI>(true);
 
         if (btnSaveScreenshot) { btnSaveScreenshot.onClick.RemoveAllListeners(); btnSaveScreenshot.onClick.AddListener(OnClick_SaveScreenshot); }
-        if (btnRestart)       { btnRestart.onClick.RemoveAllListeners();       btnRestart.onClick.AddListener(OnClick_RestartLevel); }
-        if (btnLevelSelect)   { btnLevelSelect.onClick.RemoveAllListeners();   btnLevelSelect.onClick.AddListener(OnClick_LevelSelect); }
-        if (btnNextLevel)     { btnNextLevel.onClick.RemoveAllListeners();     btnNextLevel.onClick.AddListener(OnClick_NextLevel); }
+        if (btnRestart) { btnRestart.onClick.RemoveAllListeners(); btnRestart.onClick.AddListener(OnClick_RestartLevel); }
+        if (btnLevelSelect) { btnLevelSelect.onClick.RemoveAllListeners(); btnLevelSelect.onClick.AddListener(OnClick_LevelSelect); }
+        if (btnNextLevel) { btnNextLevel.onClick.RemoveAllListeners(); btnNextLevel.onClick.AddListener(OnClick_NextLevel); }
+        if (btnSaveReplay) { btnSaveReplay.onClick.RemoveAllListeners(); btnSaveReplay.onClick.AddListener(OnClick_SaveReplay); }
+        if (btnPlayReplay) { btnPlayReplay.onClick.RemoveAllListeners(); btnPlayReplay.onClick.AddListener(OnClick_PlayReplay); }
     }
+
 
     // ─────────────────────────────────────────────────────────────────────────
     // Show / Hide
@@ -153,12 +158,24 @@ public class ClearPopupController : MonoBehaviour
     // ─────────────────────────────────────────────────────────────────────────
     // Button handlers
     // ─────────────────────────────────────────────────────────────────────────
-    public void OnClick_SaveScreenshot() { StartCoroutine(CaptureWorldOffscreenAndKeepPopup()); }
+    public void OnClick_SaveScreenshot()
+    {
+        ReplayManager.Instance?.TryDeleteCache(); // ★ 캐시 제거
 
-    public void OnClick_RestartLevel()   { StartCoroutine(RestartGameplaySceneKeepUI()); }
+        StartCoroutine(CaptureWorldOffscreenAndKeepPopup());
+    }
+
+    public void OnClick_RestartLevel()
+    {
+        ReplayManager.Instance?.TryDeleteCache(); // ★ 캐시 제거
+
+        StartCoroutine(RestartGameplaySceneKeepUI());
+    }
 
     public void OnClick_LevelSelect()
         {
+            ReplayManager.Instance?.TryDeleteCache(); // ★ 캐시 제거
+
             // 팝업에서 나갈 때는 일시정지 해제
             Time.timeScale = 1f;
 
@@ -218,6 +235,8 @@ public class ClearPopupController : MonoBehaviour
 
     public void OnClick_NextLevel()
     {
+        ReplayManager.Instance?.TryDeleteCache(); // ★ 캐시 제거
+
         var gm = GameManager.Instance;
         if (gm == null) return;
 
@@ -231,6 +250,45 @@ public class ClearPopupController : MonoBehaviour
             StartCoroutine(RestartGameplaySceneKeepUI());
         }
         // else: locked → button is already disabled
+    }
+    
+    public void OnClick_SaveReplay()
+    {
+        var src = ReplayManager.CacheFilePath;
+        if (!System.IO.File.Exists(src))
+        {
+            Debug.LogWarning("[Replay] No cached file to save.");
+            return;
+        }
+        var dstDir = Application.persistentDataPath; // 영구 저장소
+        var dst = System.IO.Path.Combine(dstDir, $"StickIt_Replay_{System.DateTime.Now:yyyyMMdd_HHmmss}.replay");
+        try
+        {
+            System.IO.File.Copy(src, dst, overwrite:false);
+            Debug.Log($"[Replay] Saved: {dst}");
+        }
+        catch (System.Exception e)
+        {
+            Debug.LogWarning($"[Replay] Save failed: {e.Message}");
+        }
+    }
+
+    public void OnClick_PlayReplay()
+    {
+        var player = FindObjectOfType<ReplayPlayer>(true);
+        if (player == null)
+        {
+            // 없으면 UI 씬 어딘가에 동적 생성
+            var go = new GameObject("ReplayPlayer");
+            player = go.AddComponent<ReplayPlayer>();
+            DontDestroyOnLoad(go);
+        }
+        if (!player.HasCachedReplay)
+        {
+            Debug.LogWarning("[Replay] No cached replay to play.");
+            return;
+        }
+        player.PlayCached();
     }
 
     // ─────────────────────────────────────────────────────────────────────────
@@ -248,12 +306,12 @@ public class ClearPopupController : MonoBehaviour
             yield break;
         }
 
-        int width  = Screen.width;
+        int width = Screen.width;
         int height = Screen.height;
 
         // UI 레이어 제외(Overlay는 어차피 안 찍히지만, Camera 모드 캔버스 대비용)
         int uiLayer = LayerMask.NameToLayer("UI");
-        int uiMask  = uiLayer >= 0 ? (1 << uiLayer) : 0;
+        int uiMask = uiLayer >= 0 ? (1 << uiLayer) : 0;
         int oldMask = cam.cullingMask;
         var oldTarget = cam.targetTexture;
 
@@ -282,11 +340,11 @@ public class ClearPopupController : MonoBehaviour
         }
         finally
         {
-            cam.cullingMask   = oldMask;
+            cam.cullingMask = oldMask;
             cam.targetTexture = oldTarget;
             RenderTexture.active = null;
-            if (rt)  rt.Release();
-            if (rt)  Destroy(rt);
+            if (rt) rt.Release();
+            if (rt) Destroy(rt);
             if (tex) Destroy(tex);
         }
 

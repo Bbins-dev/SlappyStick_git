@@ -45,7 +45,7 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: 
   Database: {fileID: 11400000, guid: 23aa89c3cf89b5b4a85ecaa455750127, type: 2}
-  highestUnlockedLevel: 0
+  highestUnlockedLevel: 1
   requireSequentialUnlock: 1
   onStageCleared:
     m_PersistentCalls:

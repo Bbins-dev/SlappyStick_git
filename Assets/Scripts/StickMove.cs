@@ -100,6 +100,8 @@ public class StickMove : MonoBehaviour
     private int angularFlipCount = 0;
     private float angularFlipTimer = 0f;
     private float lastAngularVel = 0f;
+    private void OnDisable()  { ReplayManager.Instance?.EndRecording(false); }
+    private void OnDestroy()  { ReplayManager.Instance?.EndRecording(false); }
 
     [HideInInspector] public bool IsPositioning => isPositioning;
 
@@ -205,6 +207,10 @@ public class StickMove : MonoBehaviour
         if (Input.GetMouseButtonDown(0))
         {
             isHolding = true;
+
+            // ★★★ 리플레이 시작 (발사 커밋 시점)
+            ReplayManager.Instance?.BeginRecording(transform);
+
             holdTime = 0f;
             ShowMessage("");
         }
@@ -217,6 +223,7 @@ public class StickMove : MonoBehaviour
         if (Input.GetMouseButtonUp(0) && isHolding)
         {
             isHolding = false;
+
             float p = holdTime / maxHoldTime;
             StartCoroutine(LaunchAfterDelay(p));
             hasLaunched = true;
@@ -413,6 +420,9 @@ public class StickMove : MonoBehaviour
     // ---------------------- Reset ----------------------
     private void ResetStick()
     {
+        // ★★★ 실패(리스폰): 끝내고 캐시 삭제
+        ReplayManager.Instance?.EndRecording(keepFile: false);
+
         rb.velocity = Vector2.zero;
         rb.angularVelocity = 0f;
         transform.position = startPosition;

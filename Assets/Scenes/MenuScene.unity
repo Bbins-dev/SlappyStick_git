@@ -449,6 +449,51 @@ CanvasRenderer:
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 791445940}
   m_CullTransparentMesh: 1
+--- !u!1 &813068341
+GameObject:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  serializedVersion: 6
+  m_Component:
+  - component: {fileID: 813068343}
+  - component: {fileID: 813068342}
+  m_Layer: 0
+  m_Name: ReplayManager
+  m_TagString: Untagged
+  m_Icon: {fileID: 0}
+  m_NavMeshLayer: 0
+  m_StaticEditorFlags: 0
+  m_IsActive: 1
+--- !u!114 &813068342
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 813068341}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 2bee1f64fa3f63442962640a476779e3, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  recordCamera: 1
+--- !u!4 &813068343
+Transform:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 813068341}
+  serializedVersion: 2
+  m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
+  m_LocalPosition: {x: -14.876619, y: 22.63243, z: 4.624502}
+  m_LocalScale: {x: 1, y: 1, z: 1}
+  m_ConstrainProportionsScale: 0
+  m_Children: []
+  m_Father: {fileID: 0}
+  m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
 --- !u!1 &918638589
 GameObject:
   m_ObjectHideFlags: 0
@@ -707,10 +752,6 @@ PrefabInstance:
       propertyPath: m_Name
       value: GameManager
       objectReference: {fileID: 0}
-    - target: {fileID: 3688128992019445110, guid: 49d0d6a444390bd47a3405d58c42f707, type: 3}
-      propertyPath: highestUnlockedLevel
-      value: 1
-      objectReference: {fileID: 0}
     - target: {fileID: 6982953717772788817, guid: 49d0d6a444390bd47a3405d58c42f707, type: 3}
       propertyPath: m_LocalPosition.x
       value: 12.942016
@@ -765,3 +806,4 @@ SceneRoots:
   - {fileID: 918638592}
   - {fileID: 986321114}
   - {fileID: 5010017716276948506}
+  - {fileID: 813068343}

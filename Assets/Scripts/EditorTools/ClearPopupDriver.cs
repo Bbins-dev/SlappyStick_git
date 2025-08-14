@@ -78,6 +78,9 @@ public class ClearPopupDriver : MonoBehaviour
     {
         yield return new WaitForSecondsRealtime(popupDelay);
 
+        // ★★★ 성공(클리어): 끝내고 캐시 유지
+        ReplayManager.Instance?.EndRecording(keepFile: true);
+
         // 바로 있으면 표시, 아니면 끝까지 기다린다
         if (!EnsurePopupRef())
         {
