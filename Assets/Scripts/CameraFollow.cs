@@ -1,198 +1,197 @@
+// Assets/Scripts/CameraFollow.cs
 using UnityEngine;
 
+[DefaultExecutionOrder(50)] // LevelManager(Start) 이후
 public class CameraFollow : MonoBehaviour
 {
-    // Replay override (follow-only while replaying)
+    // ───────────────────────────────────────────────────────────
+    // Replay override (리플레이 때는 초기연출/포지셔닝 OFF, 팔로우 전용)
+    // ───────────────────────────────────────────────────────────
     [Header("Replay Override")]
-
-    // ▶ 리플레이 중에는 초기연출/포지셔닝 캠 로직을 끄기 위한 스위치
     [SerializeField] private bool replayOverride = false;
     private Transform savedInitialTarget;
     private Transform savedFollowTarget;
-    private float savedInitialTimer;
-    private bool savedHasReachedPositionCam;
+    private float    savedInitialTimer;
+    private bool     savedHasReachedPositionCam;
 
+    // ───────────────────────────────────────────────────────────
+    // Initial Focus
+    // ───────────────────────────────────────────────────────────
     [Header("Initial Focus Settings")]
-    [Tooltip("Camera will focus on this Transform first")]
+    [Tooltip("처음 잠깐 바라볼 대상(없으면 자동 검색 가능)")]
     public Transform initialTarget;
-    [Tooltip("Seconds to focus on initialTarget before switching")]
+    [Tooltip("초기 타겟을 바라보는 시간(초)")]
     public float initialFocusDuration = 2f;
 
+    // ───────────────────────────────────────────────────────────
+    // Positioning Camera
+    // ───────────────────────────────────────────────────────────
     [Header("Positioning Camera Settings")]
-    [Tooltip("X position during stick positioning")]
     public float positioningCamX = 0f;
-    [Tooltip("Y position during stick positioning")]
     public float positioningCamY = 3.56f;
-    [Tooltip("Distance threshold to allow stick positioning")]
     public float positioningCamThreshold = 0.5f;
-    [Tooltip("Speed when moving camera to positioning point")]
     public float positioningCamSpeed = 5f;
 
+    // ───────────────────────────────────────────────────────────
+    // Initial Target Auto Binding
+    // ───────────────────────────────────────────────────────────
     [Header("Initial Target Auto Binding")]
-    [Tooltip("When true, initialTarget will be auto-found by tag (e.g., Target).")]
+    [Tooltip("초기 타겟이 비어있으면 태그로 자동 탐색")]
     public bool autoFindInitialByTag = true;
-
-    [Tooltip("Tag searched for initialTarget when autoFindInitialByTag is true.")]
+    [Tooltip("초기 타겟으로 찾을 태그")]
     public string initialTargetTag = "Target";
-
-    [Tooltip("When multiple tagged objects exist, pick the one closest to the stick (follow target).")]
+    [Tooltip("여러 개면 스틱(팔로우 타겟)과 가장 가까운 것을 선택")]
     public bool pickClosestTaggedToStick = true;
 
+    // ───────────────────────────────────────────────────────────
+    // Follow & Zoom
+    // ───────────────────────────────────────────────────────────
     [Header("Follow Settings")]
-    [Tooltip("The Transform that the camera will follow afterwards")]
+    [Tooltip("팔로우할 대상(보통 Stick)")]
     public Transform target;
-    [Tooltip("Offset from the target's position")]
     public Vector3 offset;
-    [Tooltip("How quickly the camera moves when following")]
     public float followSmoothSpeed = 5f;
 
     [Header("Zoom Settings")]
-    [Tooltip("Base orthographic size of the camera")]
     public float baseOrthographicSize = 5f;
-    [Tooltip("Additional zoom per unit of height above start Y")]
     public float zoomFactor = 0.5f;
-    [Tooltip("How quickly the camera zooms in/out")]
     public float zoomSmoothSpeed = 5f;
 
+    // ───────────────────────────────────────────────────────────
+    // Internals
+    // ───────────────────────────────────────────────────────────
     private Camera cam;
-    private float initialTimer;
-    private bool hasReachedPositionCam = false;
-    // 카메라가 positioningCam 위치에 도달했는지 외부에서 읽기 전용으로 공개
-    [HideInInspector] public bool IsPositionCamReady => hasReachedPositionCam;
-    private Vector3 repositionPos;
-    private StickMove stickMove;
-    private float targetStartY;
+    private float  initialTimer;
+    private bool   hasReachedPositionCam = false;
+    [HideInInspector] public bool IsPositionCamReady => replayOverride || hasReachedPositionCam;
 
+    private Vector3   repositionPos;
+    private StickMove stickMove;
+    private float     targetStartY;
+    private bool      triedAutoBindOnce = false;
+    private bool initialApplied = false;
+
+    // ───────────────────────────────────────────────────────────
 
     void Start()
     {
-        cam = Camera.main;
-        if (cam == null) cam = GetComponent<Camera>();
-        cam.orthographic = true;
-        cam.orthographicSize = baseOrthographicSize;
+        cam = Camera.main ? Camera.main : GetComponent<Camera>();
+        if (cam) { cam.orthographic = true; cam.orthographicSize = baseOrthographicSize; }
 
-        if (target == null) TryAutoBindTargets();
-        EnsureInitialFromTagIfNeeded();
+        if (target == null) TryAutoBindFollowTarget(); // Stick 자동 바인드
 
-        initialTimer = initialFocusDuration;
+        initialTimer  = initialFocusDuration;
         repositionPos = new Vector3(positioningCamX, positioningCamY, transform.position.z);
 
         if (target != null)
         {
-            stickMove = target.GetComponent<StickMove>();
+            stickMove    = target.GetComponent<StickMove>();
             targetStartY = target.position.y;
         }
     }
 
     void LateUpdate()
     {
-        if (target == null) TryAutoBindTargets();
-        EnsureInitialFromTagIfNeeded();
+        if (target == null) TryAutoBindFollowTarget();
 
-        // REPLAY OVERRIDE: follow only (skip initial focus & positioning cam)
+        // ── 리플레이 중엔 팔로우/줌만 ───────────────────────────
         if (replayOverride)
         {
-            if (target == null) return;
-
-            // Follow (same smoothing/offset as normal play)
-            var replayFollowPos = new Vector3(
-                target.position.x + offset.x,
-                target.position.y + offset.y,
-                transform.position.z);
-            transform.position = Vector3.Lerp(transform.position, replayFollowPos, followSmoothSpeed * Time.deltaTime);
-
-            // Zoom (same rule as normal play)
-            var replayHeightDelta = target.position.y - targetStartY;
-            var replayDesiredSize = baseOrthographicSize + Mathf.Max(0f, replayHeightDelta) * zoomFactor;
-            cam.orthographicSize = Mathf.Lerp(cam.orthographicSize, replayDesiredSize, zoomSmoothSpeed * Time.deltaTime);
-            return; // 초기/포지셔닝 로직 전체 스킵
+            FollowAndZoom();
+            return;
         }
 
-        // 1) Initial Focus Phase
+        // ── 1) Initial Focus ───────────────────────────────────
         if (initialTimer > 0f)
         {
-            if (initialTarget != null)
+            if (initialTarget == null && autoFindInitialByTag && !triedAutoBindOnce)
+            {
+                initialTarget    = TryFindInitialByTag();
+                triedAutoBindOnce = true;
+            }
+
+            if (initialTarget == null)
+            {
+                // 빈 화면으로 시간 끌지 말고 스킵
+                initialTimer = 0f;
+            }
+            else
             {
                 Vector3 desired = new Vector3(
                     initialTarget.position.x + offset.x,
                     initialTarget.position.y + offset.y,
                     transform.position.z);
-                transform.position = Vector3.Lerp(transform.position, desired, followSmoothSpeed * Time.deltaTime);
+
+                transform.position = Vector3.Lerp(
+                    transform.position, desired, followSmoothSpeed * Time.deltaTime);
+
+                initialTimer -= Time.deltaTime;
+                return; // 초기 포커스 중에는 여기서 종료
             }
-            initialTimer -= Time.deltaTime;
-            return;
         }
 
-        // 2) Move to Positioning Camera Point
+        // ── 2) Positioning Cam 이동 ────────────────────────────
         if (!hasReachedPositionCam)
         {
-            transform.position = Vector3.Lerp(transform.position, repositionPos, positioningCamSpeed * Time.deltaTime);
+            transform.position = Vector3.Lerp(
+                transform.position, repositionPos, positioningCamSpeed * Time.deltaTime);
+
             if (Vector3.Distance(transform.position, repositionPos) < positioningCamThreshold)
                 hasReachedPositionCam = true;
+
             return;
         }
 
-        // 3) While Stick Is Positioning, hold camera static
+        // ── 3) Stick 포지셔닝 중엔 고정 ─────────────────────────
         if (stickMove != null && stickMove.IsPositioning)
         {
             transform.position = repositionPos;
             return;
         }
 
-        // 4) Follow & Zoom after positioning
-        if (target == null) return;
-
-        // Follow
-        Vector3 followPos = new Vector3(
-            target.position.x + offset.x,
-            target.position.y + offset.y,
-            transform.position.z);
-        transform.position = Vector3.Lerp(transform.position, followPos, followSmoothSpeed * Time.deltaTime);
-
-        // Zoom
-        float heightDelta = target.position.y - targetStartY;
-        float desiredSize = baseOrthographicSize + Mathf.Max(0f, heightDelta) * zoomFactor;
-        cam.orthographicSize = Mathf.Lerp(cam.orthographicSize, desiredSize, zoomSmoothSpeed * Time.deltaTime);
+        // ── 4) Follow & Zoom ───────────────────────────────────
+        FollowAndZoom();
     }
+
+    // ───────────────────────────────────────────────────────────
+    // Public API
+    // ───────────────────────────────────────────────────────────
 
     public void SetFollowTarget(Transform t, bool resetTimers = true)
     {
-        target = t;
+        target    = t;
         stickMove = t ? t.GetComponent<StickMove>() : null;
         if (t) targetStartY = t.position.y;
 
         if (resetTimers)
         {
             hasReachedPositionCam = false;
-            initialTimer = initialFocusDuration;
-        }
-    }
-
-    private void TryAutoBindTargets()
-    {
-        // Follow target(Stick) 우선 확보
-        if (target == null)
-        {
-            var sm = FindObjectOfType<StickMove>();
-            if (sm) SetFollowTarget(sm.transform, resetTimers: true);
+            initialTimer          = initialFocusDuration;
         }
 
-        // initialTarget은 태그로 별도 확보
-        EnsureInitialFromTagIfNeeded();
+        if (initialTarget == null) initialTarget = t; // 초기타겟 미지정 시 폴백
     }
 
     public void ConfigureTargets(Transform initial, Transform follow, bool resetTimers = true)
     {
-        initialTarget = initial;               // 1) 먼저 초기 포커스 대상 지정 (예: 첫 번째 Target)
-        SetFollowTarget(follow, resetTimers);  // 2) 그 다음 스틱을 팔로우 대상으로
+        initialTarget = initial;
+        SetFollowTarget(follow, resetTimers);
     }
 
     public void ApplyInitial(LevelData.CameraInitData init)
     {
         var cam = GetComponent<Camera>();
-        transform.position = init.position;
+
+        // 1) 위치 적용 (z가 0으로 저장돼온 경우 안전 보정)
+        Vector3 p = init.position;
+        if (Mathf.Approximately(p.z, 0f))
+            p.z = (Mathf.Approximately(transform.position.z, 0f) ? -10f : transform.position.z);
+        transform.position = p;
+
+        // 2) 회전
         transform.rotation = Quaternion.Euler(0f, 0f, init.rotationZ);
 
+        // 3) 사이즈/FOV (해당 값이 유효할 때만)
         if (cam != null)
         {
             if (cam.orthographic && init.orthographicSize > 0f)
@@ -200,83 +199,140 @@ public class CameraFollow : MonoBehaviour
             else if (!cam.orthographic && init.fieldOfView > 0f)
                 cam.fieldOfView = init.fieldOfView;
         }
+
+        initialApplied = true;
     }
 
+    // 리플레이 진입/해제
     public void EnterReplayOverride(Transform followTarget)
     {
         if (followTarget == null) return;
 
-        // save state
-        savedInitialTarget = initialTarget;
-        savedFollowTarget = target;
-        savedInitialTimer = initialTimer;
-        savedHasReachedPositionCam = hasReachedPositionCam;
+        // 저장
+        savedInitialTarget        = initialTarget;
+        savedFollowTarget         = target;
+        savedInitialTimer         = initialTimer;
+        savedHasReachedPositionCam= hasReachedPositionCam;
 
-        // enable override
-        replayOverride = true;
+        replayOverride            = true;
 
-        // kill initial/positioning sequences
-        initialTimer = 0f;
-        hasReachedPositionCam = true;
+        // 초기연출/포지셔닝 시퀀스 비활성
+        initialTimer              = 0f;
+        hasReachedPositionCam     = true;
 
-        // lock follow to the replay target (no timer reset)
+        // 즉시 팔로우(타이머 리셋 없음)
         SetFollowTarget(followTarget, resetTimers: false);
     }
 
     public void ExitReplayOverride(Transform restoreInitial, Transform restoreFollow)
     {
-        // disable override
         replayOverride = false;
 
-        // restore targets (prefer args; fallback to saved)
         var init = restoreInitial != null ? restoreInitial : savedInitialTarget;
-        var foll = restoreFollow != null ? restoreFollow : savedFollowTarget;
+        var foll = restoreFollow  != null ? restoreFollow  : savedFollowTarget;
 
         if (foll != null)
             ConfigureTargets(init != null ? init : foll, foll, resetTimers: true);
     }
 
-    // ▶ 리플레이가 시작/종료될 때 호출 (followOverride가 있으면 그걸 타겟으로 바로 팔로우)
     public void SetReplayOverride(bool enabled, Transform followOverride = null)
     {
         replayOverride = enabled;
         if (enabled && followOverride != null)
-        {
-            // 초기 연출/포지셔닝 타이머 초기화 없이 즉시 따라가도록
             SetFollowTarget(followOverride, resetTimers: false);
-        }
     }
-    
-    private void EnsureInitialFromTagIfNeeded()
+
+    // ───────────────────────────────────────────────────────────
+    // Helpers
+    // ───────────────────────────────────────────────────────────
+
+    // Stick 자동 바인드 (없을 때 한 번만)
+    private void TryAutoBindFollowTarget()
     {
-        if (!autoFindInitialByTag) return;
-        if (initialTarget != null) return;
+        if (target != null) return;
 
-        GameObject[] tagged = null;
+        var sm = FindObjectOfType<StickMove>();
+        if (sm != null) SetFollowTarget(sm.transform, resetTimers: true);
+    }
+
+    // Tag=Target 에서 '진짜' 초기 타겟 찾기 (프리뷰/컨피그 제외)
+    private Transform TryFindInitialByTag()
+    {
+        GameObject[] tagged;
         try { tagged = GameObject.FindGameObjectsWithTag(initialTargetTag); }
-        catch { tagged = null; } // tag 미정의 등 예외 안전
+        catch { return null; } // 태그 미등록 등 예외
 
-        if (tagged != null && tagged.Length > 0)
+        Transform best = null;
+        float bestScore = float.PositiveInfinity;
+
+        for (int i = 0; i < tagged.Length; i++)
         {
-            Transform chosen = tagged[0].transform;
+            var go = tagged[i];
+            if (!go || !go.activeInHierarchy) continue;
 
+            var t = go.transform;
+            if (IsEditorPreview(t)) continue;              // 프리뷰/설정용 제외
+            if (!HasWorldContent(t)) continue;             // 보일 게 없는 건 제외
+
+            float score;
             if (pickClosestTaggedToStick && target != null)
             {
-                var stickPos = target.position;
-                float best = float.PositiveInfinity;
-                for (int i = 0; i < tagged.Length; i++)
-                {
-                    var tt = tagged[i]?.transform;
-                    if (!tt) continue;
-                    float d = (tt.position - stickPos).sqrMagnitude;
-                    if (d < best) { best = d; chosen = tt; }
-                }
+                score = (t.position - target.position).sqrMagnitude;
+            }
+            else
+            {
+                score = (t.position - transform.position).sqrMagnitude;
             }
 
-            initialTarget = chosen;
+            if (score < bestScore) { bestScore = score; best = t; }
         }
 
-        // 태그가 없거나 못 찾았으면 마지막 폴백: stick으로 둔다(있다면)
-        if (initialTarget == null) initialTarget = target;
+        // 못 찾으면 null
+        return best;
+    }
+
+    // 프리뷰/설정 트리 배제 규칙
+    private bool IsEditorPreview(Transform t)
+    {
+        while (t != null)
+        {
+            string n = t.name;
+            if (n.StartsWith("_Preview") || n.Contains("LevelConfigurator") || n.Contains("PreviewGroup"))
+                return true;
+            t = t.parent;
+        }
+        return false;
+    }
+
+    // 렌더러/콜라이더가 있으면 ‘보일’ 가능성이 높다고 판단
+    private bool HasWorldContent(Transform t)
+    {
+        if (!t) return false;
+        if (t.GetComponentInChildren<Renderer>(true)   != null) return true;
+        if (t.GetComponentInChildren<Collider2D>(true) != null) return true;
+        return false;
+    }
+
+    private void FollowAndZoom()
+    {
+        if (target == null) return;
+
+        // Follow
+        Vector3 followPos = new Vector3(
+            target.position.x + offset.x,
+            target.position.y + offset.y,
+            transform.position.z);
+
+        transform.position = Vector3.Lerp(
+            transform.position, followPos, followSmoothSpeed * Time.deltaTime);
+
+        // Zoom
+        if (cam != null)
+        {
+            float heightDelta = target.position.y - targetStartY;
+            float desiredSize = baseOrthographicSize + Mathf.Max(0f, heightDelta) * zoomFactor;
+            cam.orthographicSize = Mathf.Lerp(
+                cam.orthographicSize, desiredSize, zoomSmoothSpeed * Time.deltaTime);
+        }
     }
 }

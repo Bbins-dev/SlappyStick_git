@@ -51,9 +51,9 @@ MonoBehaviour:
         capsuleDirection: 0
         paths:
         - points:
-          - {x: 0.26632345, y: 3.629477}
-          - {x: -3.3635411, y: -0.5231538}
-          - {x: 2.396405, y: -1.0169661}
+          - {x: 0.056555644, y: 0.6337855}
+          - {x: -0.3505149, y: -1.0580983}
+          - {x: 0.012681484, y: -1.0597619}
         edgePoints: []
   targets:
   - name: target_chicken
@@ -109,8 +109,8 @@ MonoBehaviour:
       capsuleDirection: 0
       paths: []
       edgePoints: []
-    hasRigidbody2D: 1
-    rbGravityScale: 1
+    hasRigidbody2D: 0
+    rbGravityScale: 0
     tip:
       localPosition: {x: 0, y: 0}
       localRotationZ: 0

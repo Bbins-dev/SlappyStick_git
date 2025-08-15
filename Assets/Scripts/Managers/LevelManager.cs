@@ -148,7 +148,9 @@ public class LevelManager : MonoBehaviour
         if (isObstacle)
         {
             // 1) Decide whether this obstacle should have a Rigidbody2D
-            bool wantRb = e.hasRigidbody2D;
+            // bool wantRb = e.hasRigidbody2D;
+            // 변경: 저장값과 무관하게 Obstacle은 항상 RB 부여
+            bool wantRb = true;
 
             // (선택) 레이어로 강제 Dynamic 처리하고 싶다면: obstacleDynamicLayer 사용
             // wantRb |= (obstacleDynamicLayer >= 0 && e.layer == obstacleDynamicLayer);
