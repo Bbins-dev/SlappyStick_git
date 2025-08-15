@@ -423,7 +423,7 @@ Transform:
   m_GameObject: {fileID: 519420028}
   serializedVersion: 2
   m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
-  m_LocalPosition: {x: 17.150002, y: 9.04, z: -10}
+  m_LocalPosition: {x: 24.33, y: 10, z: -10}
   m_LocalScale: {x: 1, y: 1, z: 1}
   m_ConstrainProportionsScale: 0
   m_Children: []
@@ -650,7 +650,7 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: 
   useEditorOverride: 1
-  editorOverrideLevel: {fileID: 11400000, guid: 81859e54414c9e14a8bcde2976f757a8, type: 2}
+  editorOverrideLevel: {fileID: 11400000, guid: dd152b71657639346b0a21829d7b8101, type: 2}
   dynamicRoot: {fileID: 0}
 --- !u!4 &926394322
 Transform:
