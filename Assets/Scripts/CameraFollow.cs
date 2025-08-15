@@ -28,6 +28,16 @@ public class CameraFollow : MonoBehaviour
     [Tooltip("Speed when moving camera to positioning point")]
     public float positioningCamSpeed = 5f;
 
+    [Header("Initial Target Auto Binding")]
+    [Tooltip("When true, initialTarget will be auto-found by tag (e.g., Target).")]
+    public bool autoFindInitialByTag = true;
+
+    [Tooltip("Tag searched for initialTarget when autoFindInitialByTag is true.")]
+    public string initialTargetTag = "Target";
+
+    [Tooltip("When multiple tagged objects exist, pick the one closest to the stick (follow target).")]
+    public bool pickClosestTaggedToStick = true;
+
     [Header("Follow Settings")]
     [Tooltip("The Transform that the camera will follow afterwards")]
     public Transform target;
@@ -62,6 +72,7 @@ public class CameraFollow : MonoBehaviour
         cam.orthographicSize = baseOrthographicSize;
 
         if (target == null) TryAutoBindTargets();
+        EnsureInitialFromTagIfNeeded();
 
         initialTimer = initialFocusDuration;
         repositionPos = new Vector3(positioningCamX, positioningCamY, transform.position.z);
@@ -76,6 +87,7 @@ public class CameraFollow : MonoBehaviour
     void LateUpdate()
     {
         if (target == null) TryAutoBindTargets();
+        EnsureInitialFromTagIfNeeded();
 
         // REPLAY OVERRIDE: follow only (skip initial focus & positioning cam)
         if (replayOverride)
@@ -154,16 +166,19 @@ public class CameraFollow : MonoBehaviour
             hasReachedPositionCam = false;
             initialTimer = initialFocusDuration;
         }
-
-        // 초기 포커스 대상이 비어있다면 Stick으로
-        if (initialTarget == null) initialTarget = t;
     }
 
     private void TryAutoBindTargets()
     {
-        if (target != null) return;
-        var sm = FindObjectOfType<StickMove>();
-        if (sm != null) SetFollowTarget(sm.transform, resetTimers: true);
+        // Follow target(Stick) 우선 확보
+        if (target == null)
+        {
+            var sm = FindObjectOfType<StickMove>();
+            if (sm) SetFollowTarget(sm.transform, resetTimers: true);
+        }
+
+        // initialTarget은 태그로 별도 확보
+        EnsureInitialFromTagIfNeeded();
     }
 
     public void ConfigureTargets(Transform initial, Transform follow, bool resetTimers = true)
@@ -220,7 +235,7 @@ public class CameraFollow : MonoBehaviour
         if (foll != null)
             ConfigureTargets(init != null ? init : foll, foll, resetTimers: true);
     }
-    
+
     // ▶ 리플레이가 시작/종료될 때 호출 (followOverride가 있으면 그걸 타겟으로 바로 팔로우)
     public void SetReplayOverride(bool enabled, Transform followOverride = null)
     {
@@ -230,5 +245,38 @@ public class CameraFollow : MonoBehaviour
             // 초기 연출/포지셔닝 타이머 초기화 없이 즉시 따라가도록
             SetFollowTarget(followOverride, resetTimers: false);
         }
+    }
+    
+    private void EnsureInitialFromTagIfNeeded()
+    {
+        if (!autoFindInitialByTag) return;
+        if (initialTarget != null) return;
+
+        GameObject[] tagged = null;
+        try { tagged = GameObject.FindGameObjectsWithTag(initialTargetTag); }
+        catch { tagged = null; } // tag 미정의 등 예외 안전
+
+        if (tagged != null && tagged.Length > 0)
+        {
+            Transform chosen = tagged[0].transform;
+
+            if (pickClosestTaggedToStick && target != null)
+            {
+                var stickPos = target.position;
+                float best = float.PositiveInfinity;
+                for (int i = 0; i < tagged.Length; i++)
+                {
+                    var tt = tagged[i]?.transform;
+                    if (!tt) continue;
+                    float d = (tt.position - stickPos).sqrMagnitude;
+                    if (d < best) { best = d; chosen = tt; }
+                }
+            }
+
+            initialTarget = chosen;
+        }
+
+        // 태그가 없거나 못 찾았으면 마지막 폴백: stick으로 둔다(있다면)
+        if (initialTarget == null) initialTarget = target;
     }
 }
