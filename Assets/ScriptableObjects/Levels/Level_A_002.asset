@@ -13,7 +13,7 @@ MonoBehaviour:
   m_Name: Level_A_002
   m_EditorClassIdentifier: 
   cameraInitial:
-    position: {x: 30.09, y: 9.24, z: -10}
+    position: {x: 32.3, y: 9.24, z: -10}
     rotationZ: 0
     orthographicSize: 7
     fieldOfView: 0
@@ -24,7 +24,7 @@ MonoBehaviour:
     position: {x: 0.10999966, y: 2}
     rotationZ: 0
     scale: {x: 0.3, y: 0.16831176}
-    sprite: {fileID: 21300000, guid: 3b1068a4a7c1af04fad65d953a06a909, type: 3}
+    sprite: {fileID: 21300000, guid: 02f45cb55c3c3d44ca696abd42ff0bcd, type: 3}
     color: {r: 1, g: 1, b: 1, a: 1}
     sortingLayerName: Default
     sortingOrder: 0
@@ -59,18 +59,18 @@ MonoBehaviour:
   - name: Target
     tag: Target
     layer: 7
-    position: {x: 30.348927, y: 1.3784056}
+    position: {x: 32.25893, y: 1.6584063}
     rotationZ: 0
     scale: {x: 0.63, y: 0.63}
-    sprite: {fileID: 21300000, guid: ac07485b6f677fb4288d6ab434483c0d, type: 3}
+    sprite: {fileID: 21300000, guid: c8b256648fe0ce043acb77061f153659, type: 3}
     color: {r: 1, g: 1, b: 1, a: 1}
     sortingLayerName: Default
     sortingOrder: 0
     colliders:
     - kind: 3
       isTrigger: 0
-      offset: {x: -0.6, y: -0.45}
-      size: {x: 5.9, y: 4.73}
+      offset: {x: 0.75, y: -0.72}
+      size: {x: 6.71, y: 4.11}
       radius: 0
       capsuleDirection: 1
       paths: []
@@ -96,7 +96,7 @@ MonoBehaviour:
     position: {x: 20.758928, y: 1.938406}
     rotationZ: 0
     scale: {x: 0.47999996, y: 0.47999996}
-    sprite: {fileID: 21300000, guid: d2ba911d1d4d6f44c9939516ba732d45, type: 3}
+    sprite: {fileID: 21300000, guid: f8f4d56e4058ec84cb0a157748794721, type: 3}
     color: {r: 1, g: 1, b: 1, a: 1}
     sortingLayerName: Default
     sortingOrder: 0
@@ -129,7 +129,7 @@ MonoBehaviour:
     position: {x: 16.87893, y: 1.938406}
     rotationZ: 0
     scale: {x: 0.47999996, y: 0.47999996}
-    sprite: {fileID: 21300000, guid: d2ba911d1d4d6f44c9939516ba732d45, type: 3}
+    sprite: {fileID: 21300000, guid: f8f4d56e4058ec84cb0a157748794721, type: 3}
     color: {r: 1, g: 1, b: 1, a: 1}
     sortingLayerName: Default
     sortingOrder: 0
@@ -162,7 +162,7 @@ MonoBehaviour:
     position: {x: 11.938929, y: 1.898406}
     rotationZ: 0
     scale: {x: 0.47999996, y: 0.47999996}
-    sprite: {fileID: 21300000, guid: d2ba911d1d4d6f44c9939516ba732d45, type: 3}
+    sprite: {fileID: 21300000, guid: f8f4d56e4058ec84cb0a157748794721, type: 3}
     color: {r: 1, g: 1, b: 1, a: 1}
     sortingLayerName: Default
     sortingOrder: 0
@@ -192,10 +192,10 @@ MonoBehaviour:
   - name: Obstacle
     tag: Obstacle
     layer: 8
-    position: {x: 7.5589285, y: 1.938406}
+    position: {x: 7.5589285, y: 1.9584064}
     rotationZ: 0
     scale: {x: 0.47999996, y: 0.47999996}
-    sprite: {fileID: 21300000, guid: d2ba911d1d4d6f44c9939516ba732d45, type: 3}
+    sprite: {fileID: 21300000, guid: f8f4d56e4058ec84cb0a157748794721, type: 3}
     color: {r: 1, g: 1, b: 1, a: 1}
     sortingLayerName: Default
     sortingOrder: 0
@@ -226,10 +226,10 @@ MonoBehaviour:
   - name: Fulcrum
     tag: Fulcrum
     layer: 0
-    position: {x: -0.6899996, y: 0.6384058}
+    position: {x: -0.6899996, y: 0.9484062}
     rotationZ: 0
     scale: {x: 0.32, y: 0.32}
-    sprite: {fileID: 21300000, guid: ab93e23940ca8e740b25bd51f9f21464, type: 3}
+    sprite: {fileID: 21300000, guid: a5227b487774887439366633326fa110, type: 3}
     color: {r: 1, g: 1, b: 1, a: 1}
     sortingLayerName: Default
     sortingOrder: 0
