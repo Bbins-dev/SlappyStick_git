@@ -3009,7 +3009,6 @@ GameObject:
   serializedVersion: 6
   m_Component:
   - component: {fileID: 1729412145}
-  - component: {fileID: 1729412144}
   - component: {fileID: 1729412146}
   - component: {fileID: 1729412147}
   m_Layer: 0
@@ -3019,26 +3018,6 @@ GameObject:
   m_NavMeshLayer: 0
   m_StaticEditorFlags: 0
   m_IsActive: 1
---- !u!114 &1729412144
-MonoBehaviour:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 1729412143}
-  m_Enabled: 1
-  m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: 5caa6d4d9c82dcd40aaba4fc4908f73e, type: 3}
-  m_Name: 
-  m_EditorClassIdentifier: 
-  canvas: {fileID: 735632751}
-  localUiCamera: {fileID: 539870109}
-  preferOverlayWhenMainCamera: 1
-  planeDistanceOffset: 0.05
-  localPreviewClearFlags: 1
-  localPreviewBackground: {r: 0.07, g: 0.1, b: 0.14, a: 1}
-  addSkyboxComponentIfMissing: 1
-  mainCameraTag: MainCamera
 --- !u!4 &1729412145
 Transform:
   m_ObjectHideFlags: 0
