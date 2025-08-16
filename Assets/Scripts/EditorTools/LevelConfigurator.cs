@@ -6,14 +6,13 @@ using UnityEditor.SceneManagement;
 #endif
 
 /// <summary>
-/// Editor-time tool to save/load LevelData from the current scene layout.
-/// - Save To LevelData: capture scene objects into LevelData asset
-/// - Load From LevelData (Edit): spawn editable preview objects from LevelData
-/// - Clear Preview (Generated Only): remove previously generated preview objects
+/// Scene ↔ LevelData 동기화 툴(에디터 전용)
+/// - Save To LevelData: 현재(또는 currentGroup)의 배치를 LevelData로 저장
+/// - Load From LevelData (Edit): LevelData를 프리뷰 오브젝트로 생성
+/// - Clear Preview (Generated Only): 생성된 프리뷰만 제거
 /// </summary>
 public class LevelConfigurator : MonoBehaviour
 {
-    
     public enum ClearMode { GeneratedOnly, AllChildren, None }
 
     [Header("Load Settings")]
@@ -29,18 +28,19 @@ public class LevelConfigurator : MonoBehaviour
     public Transform fulcrumsRoot;
 
     [Header("Preview Groups (Editor)")]
-    [Tooltip("All preview groups are created under this container")]
+    [Tooltip("모든 프리뷰 그룹이 생성될 컨테이너")]
     public Transform previewContainer;
-    [Tooltip("Last loaded group; Save uses this first")]
+    [Tooltip("최근 로드된 그룹(있으면 Save가 이쪽을 우선으로 읽음)")]
     public Transform currentGroup;
 
     [Header("Camera Initial (Save/Load)")]
-    [Tooltip("If null, Camera.main will be used for save/load camera initial pose.")]
+    [Tooltip("비워두면 Camera.main을 사용하여 카메라 초기 포즈를 저장/적용")]
     public Camera initialCamera;
 
-
 #if UNITY_EDITOR
-    // ---------- Context Menus ----------
+    // ─────────────────────────────────────────────────────────────────────
+    // Save
+    // ─────────────────────────────────────────────────────────────────────
     [ContextMenu("Save To LevelData")]
     public void SaveToLevelData()
     {
@@ -50,7 +50,7 @@ public class LevelConfigurator : MonoBehaviour
             return;
         }
 
-        // group 우선 부모 잡기
+        // 1) 그룹 우선으로 참조(있으면 그룹 하위에서만 읽음)
         Transform gStick = null, gTargets = null, gObstacles = null, gFulcrums = null;
         if (currentGroup != null)
         {
@@ -60,121 +60,98 @@ public class LevelConfigurator : MonoBehaviour
             gFulcrums  = currentGroup.Find("__Preview_Fulcrums");
         }
 
-        // Stick (single)
+        // 2) Stick (단일)
         GameObject stickGo = null;
         if (gStick != null && gStick.childCount > 0)
-            stickGo = gStick.GetChild(0).gameObject;              // >>> group 우선
+            stickGo = gStick.GetChild(0).gameObject;   // 그룹 우선
         else
-            stickGo = ResolveStickForSave();                       // 기존 폴백
+            stickGo = ResolveStickForSave();            // 폴백(씬에서 찾기)
+
         levelData.stick = stickGo != null ? CaptureEntity(stickGo, isStick: true) : default;
 
-        // Groups (group 우선 → 없으면 기존 root/marker)
+        // 3) 그룹(타겟/장애물/지지대)
         levelData.targets   = CaptureGroupForSave(gTargets   != null ? gTargets   : targetsRoot,   SpawnMarker.SpawnType.Target);
         levelData.obstacles = CaptureGroupForSave(gObstacles != null ? gObstacles : obstaclesRoot, SpawnMarker.SpawnType.Obstacle);
         levelData.fulcrums  = CaptureGroupForSave(gFulcrums  != null ? gFulcrums  : fulcrumsRoot,  SpawnMarker.SpawnType.Fulcrum);
-        // Camera initial pose
+
+        // 4) 카메라 초기 포즈
         CaptureCameraInitial();
 
         EditorUtility.SetDirty(levelData);
         AssetDatabase.SaveAssets();
-        Debug.Log($"[LevelConfigurator] Saved from {(currentGroup ? currentGroup.name : "scene roots")} to LevelData: {levelData.name}");
+        Debug.Log($"[LevelConfigurator] Saved → LevelData: {levelData.name} (source: {(currentGroup ? currentGroup.name : "scene roots/markers")})");
     }
 
+    // ─────────────────────────────────────────────────────────────────────
+    // Load (Editor Preview)
+    // ─────────────────────────────────────────────────────────────────────
     [ContextMenu("Load From LevelData (Edit)")]
     public void LoadFromLevelData()
     {
-        
-    #if UNITY_EDITOR
-        // ensure we are NOT selecting a preview object that will be destroyed
         Selection.activeObject = this.gameObject;
-    #endif
-    
+
         if (levelData == null)
         {
             Debug.LogError("[LevelConfigurator] LevelData asset is not assigned.");
             return;
         }
 
-        // (A) 그룹 컨테이너 확보
+        // A) 컨테이너
         var container = EnsureContainer();
 
-        // (B) Clear 단계: None이면 스킵, 그 외엔 컨테이너에서 수행
+        // B) 정리
         if (clearModeOnLoad != ClearMode.None)
             ClearByMode(container, clearModeOnLoad);
 
-        // (C) 새 그룹 생성
+        // C) 새 그룹
         string groupName = $"__PreviewGroup_{levelData.name}";
         var groupGO = new GameObject(groupName);
         Undo.RegisterCreatedObjectUndo(groupGO, "Create Preview Group");
         groupGO.transform.SetParent(container, false);
-        currentGroup = groupGO.transform; // Save에서 사용할 그룹
+        currentGroup = groupGO.transform;
 
-        // (D) 그룹 하위에 타입별 루트 생성
-        var stickParent      = EnsurePreviewRoot(currentGroup, "__Preview_Stick");
-        var targetsParent    = EnsurePreviewRoot(currentGroup, "__Preview_Targets");
-        var obstaclesParent  = EnsurePreviewRoot(currentGroup, "__Preview_Obstacles");
-        var fulcrumsParent   = EnsurePreviewRoot(currentGroup, "__Preview_Fulcrums");
+        // D) 타입별 루트
+        var stickParent     = EnsurePreviewRoot(currentGroup, "__Preview_Stick");
+        var targetsParent   = EnsurePreviewRoot(currentGroup, "__Preview_Targets");
+        var obstaclesParent = EnsurePreviewRoot(currentGroup, "__Preview_Obstacles");
+        var fulcrumsParent  = EnsurePreviewRoot(currentGroup, "__Preview_Fulcrums");
 
-        // (E) 스폰
-        if (levelData.stick.sprite != null || levelData.stick.colliders != null)
-            BuildEntityEditor(levelData.stick, SpawnMarker.SpawnType.Stick, stickParent, isStick:true);
+        // E) 스폰
+        if (HasValidEntity(levelData.stick))
+            BuildEntityEditor(levelData.stick, SpawnMarker.SpawnType.Stick, stickParent, isStick: true);
 
         if (levelData.targets != null)
             foreach (var e in levelData.targets)
-                BuildEntityEditor(e, SpawnMarker.SpawnType.Target, targetsParent, isStick:false);
+                BuildEntityEditor(e, SpawnMarker.SpawnType.Target, targetsParent, isStick: false);
 
         if (levelData.obstacles != null)
             foreach (var e in levelData.obstacles)
-                BuildEntityEditor(e, SpawnMarker.SpawnType.Obstacle, obstaclesParent, isStick:false);
+                BuildEntityEditor(e, SpawnMarker.SpawnType.Obstacle, obstaclesParent, isStick: false);
 
         if (levelData.fulcrums != null)
             foreach (var e in levelData.fulcrums)
-                BuildEntityEditor(e, SpawnMarker.SpawnType.Fulcrum, fulcrumsParent, isStick:false);
+                BuildEntityEditor(e, SpawnMarker.SpawnType.Fulcrum, fulcrumsParent, isStick: false);
 
-        // Apply saved camera-initial pose to the main/assigned camera
+        // F) 카메라 초기값 적용
         ApplyCameraInitialOnLoad();
 
         EditorSceneManager.MarkSceneDirty(gameObject.scene);
-        Debug.Log($"[LevelConfigurator] Loaded LevelData into new group: {groupName}");
+        Debug.Log($"[LevelConfigurator] Loaded LevelData → {groupName}");
     }
-
 
     [ContextMenu("Clear Preview (Generated Only)")]
     public void ClearPreview()
     {
-        ClearGeneratedChildren(EnsurePreviewRoot("__Preview_Stick",    stickRoot));
-        ClearGeneratedChildren(EnsurePreviewRoot("__Preview_Targets",  targetsRoot));
-        ClearGeneratedChildren(EnsurePreviewRoot("__Preview_Obstacles",obstaclesRoot));
-        ClearGeneratedChildren(EnsurePreviewRoot("__Preview_Fulcrums", fulcrumsRoot));
+        // 컨테이너 기준으로 생성된 것만 지움
+        var container = EnsureContainer();
+        ClearGeneratedChildren(container);
         EditorSceneManager.MarkSceneDirty(gameObject.scene);
     }
-#endif // UNITY_EDITOR
 
-#if UNITY_EDITOR
-    private void DeselectIfUnder(Transform root)
-    {
-        if (!root) return;
-        foreach (var o in Selection.objects)
-        {
-            var go = o as GameObject;
-            if (!go) continue;
-            var t = go.transform;
-            if (t == root || t.IsChildOf(root))
-            {
-                Selection.objects = new Object[0];
-                break;
-            }
-        }
-    }
+    // ─────────────────────────────────────────────────────────────────────
+    // 내부 유틸
+    // ─────────────────────────────────────────────────────────────────────
 
-    private void SafeUndoDestroy(Object obj)
-    {
-        if (obj != null) Undo.DestroyObjectImmediate(obj);
-    }
-#endif
-
-#if UNITY_EDITOR
-    // === GROUP HELPERS ===
     private Transform EnsureContainer()
     {
         if (previewContainer != null) return previewContainer;
@@ -187,10 +164,10 @@ public class LevelConfigurator : MonoBehaviour
             t = go.transform;
         }
         previewContainer = t;
-        return previewContainer;
+        return t;
     }
 
-    private Transform EnsurePreviewRoot(Transform parent, string name) // overload
+    private Transform EnsurePreviewRoot(Transform parent, string name)
     {
         var t = parent.Find(name);
         if (t == null)
@@ -202,26 +179,26 @@ public class LevelConfigurator : MonoBehaviour
         }
         return t;
     }
-#endif
 
+    private bool HasValidEntity(LevelData.EntityData e)
+    {
+        // 스프라이트/콜라이더 하나도 없고 이름도 비어있으면 무효 처리
+        bool hasVisual = e.sprite != null || (e.colliders != null && e.colliders.Length > 0);
+        return hasVisual || !string.IsNullOrEmpty(e.name);
+    }
 
-    // =====================================================================
-    // =========================== SAVE HELPERS =============================
-    // =====================================================================
-#if UNITY_EDITOR
     private GameObject ResolveStickForSave()
     {
         if (stickRoot != null)
             return stickRoot.childCount > 0 ? stickRoot.GetChild(0).gameObject : stickRoot.gameObject;
 
-        // Fallback: find first marker of type Stick
+        // 폴백: SpawnMarker 중 Stick 타입
         var markers = FindObjectsOfType<SpawnMarker>(true);
         foreach (var m in markers)
             if (m != null && m.type == SpawnMarker.SpawnType.Stick)
                 return m.gameObject;
         return null;
     }
-    
 
     private LevelData.EntityData[] CaptureGroupForSave(Transform root, SpawnMarker.SpawnType type)
     {
@@ -252,28 +229,40 @@ public class LevelConfigurator : MonoBehaviour
             name      = go.name,
             tag       = go.tag,
             layer     = go.layer,
-            position  = tr.position,
+            position  = tr.position,                   // ← Z 포함
             rotationZ = tr.eulerAngles.z,
-            scale     = tr.localScale,
+            scale = new Vector2(tr.localScale.x, tr.localScale.y),                 // ← Z 스케일까지 유지
             sprite    = null,
             color     = Color.white,
             colliders = CaptureAllColliders(go),
-            tip       = default
+            tip       = default,
+
+            // Rigidbody2D
+            hasRigidbody2D = false,
+            rbGravityScale = 0f,
+
+            // Sorting
+            sortingLayerName = string.Empty,
+            sortingOrder     = 0
         };
 
         var rb = go.GetComponent<Rigidbody2D>();
-        data.hasRigidbody2D = rb != null;
-        data.rbGravityScale = rb != null ? rb.gravityScale : 0f;
+        if (rb != null)
+        {
+            data.hasRigidbody2D = true;
+            data.rbGravityScale = rb.gravityScale;
+        }
 
         var sr = go.GetComponent<SpriteRenderer>();
         if (sr != null)
         {
             data.sprite = sr.sprite;
-            data.color = sr.color;
+            data.color  = sr.color;
             data.sortingLayerName = sr.sortingLayerName;
             data.sortingOrder     = sr.sortingOrder;
         }
 
+        // Stick의 Tip 저장
         if (isStick)
         {
             var tipTr = tr.Find("Tip");
@@ -284,9 +273,9 @@ public class LevelConfigurator : MonoBehaviour
                 {
                     data.tip = new LevelData.TipData
                     {
-                        localPosition = tipTr.localPosition,
+                        localPosition  = tipTr.localPosition,
                         localRotationZ = tipTr.localEulerAngles.z,
-                        collider = CaptureCollider(tipCol)
+                        collider       = CaptureCollider(tipCol)
                     };
                 }
             }
@@ -350,97 +339,74 @@ public class LevelConfigurator : MonoBehaviour
 
         return d;
     }
-#endif // UNITY_EDITOR
 
-    // =====================================================================
-    // =========================== LOAD HELPERS =============================
-    // =====================================================================
-#if UNITY_EDITOR
-    private Transform EnsurePreviewRoot(string autoName, Transform explicitRoot)
-    {
-        if (explicitRoot != null) return explicitRoot;
-
-        var t = transform.Find(autoName);
-        if (t == null)
-        {
-            var go = new GameObject(autoName);
-            Undo.RegisterCreatedObjectUndo(go, "Create Preview Root");
-            t = go.transform;
-            t.SetParent(transform, false);
-        }
-        return t;
-    }
-
+    // ─────────────────────────────────────────────────────────────────────
+    // Clear helpers
+    // ─────────────────────────────────────────────────────────────────────
     private void ClearByMode(Transform parent, ClearMode mode)
     {
         if (parent == null) return;
         if (mode == ClearMode.AllChildren)
             ClearAllChildren(parent);
         else
-            ClearGeneratedChildren(parent); // 기존 함수 사용
+            ClearGeneratedChildren(parent);
     }
 
     private void ClearAllChildren(Transform parent)
     {
-    #if UNITY_EDITOR
         for (int i = parent.childCount - 1; i >= 0; i--)
             Undo.DestroyObjectImmediate(parent.GetChild(i).gameObject);
-    #else
-        for (int i = parent.childCount - 1; i >= 0; i--)
-            DestroyImmediate(parent.GetChild(i).gameObject);
-    #endif
     }
 
     private void ClearGeneratedChildren(Transform parent)
     {
         if (parent == null) return;
         var flags = parent.GetComponentsInChildren<GeneratedFlag>(true);
-    #if UNITY_EDITOR
         for (int i = flags.Length - 1; i >= 0; i--)
             Undo.DestroyObjectImmediate(flags[i].gameObject);
-    #else
-        for (int i = flags.Length - 1; i >= 0; i--)
-            DestroyImmediate(flags[i].gameObject);
-    #endif
     }
 
+    // ─────────────────────────────────────────────────────────────────────
+    // Build (Editor Preview)
+    // ─────────────────────────────────────────────────────────────────────
     private void BuildEntityEditor(LevelData.EntityData e, SpawnMarker.SpawnType type, Transform parent, bool isStick)
     {
         var root = new GameObject(string.IsNullOrEmpty(e.name) ? "Entity" : e.name);
         Undo.RegisterCreatedObjectUndo(root, "Load Entity");
         root.transform.SetParent(parent, false);
+
+        // 포즈 복원: Z 포함
         root.transform.position = e.position;
         root.transform.rotation = Quaternion.Euler(0, 0, e.rotationZ);
-        root.transform.localScale = new Vector3(e.scale.x, e.scale.y, 1f);
-        root.layer = e.layer;
+        root.transform.localScale = new Vector3(e.scale.x, e.scale.y, 1f);           // ← Z 스케일은 복원 X
 
-        // Tag (safe assign)
+        root.layer = e.layer;
         if (!string.IsNullOrEmpty(e.tag))
         {
-            try { root.tag = e.tag; } catch { /* ignore if tag not defined */ }
+            try { root.tag = e.tag; } catch { /* 태그 미정의 시 무시 */ }
         }
 
-        // Marker for saving & for cleanup
+        // 마커 & 정리 플래그
         var marker = Undo.AddComponent<SpawnMarker>(root);
         marker.type = type;
-        Undo.AddComponent<GeneratedFlag>(root); // mark as generated
+        Undo.AddComponent<GeneratedFlag>(root);
 
-        // Visual
+        // 비주얼
         if (e.sprite != null)
         {
             var sr = Undo.AddComponent<SpriteRenderer>(root);
             sr.sprite = e.sprite;
-            sr.color = (e.color == default ? Color.white : e.color);
+            sr.color  = (e.color == default ? Color.white : e.color);
             sr.sortingLayerName = e.sortingLayerName;
-            sr.sortingOrder = e.sortingOrder;
+            sr.sortingOrder     = e.sortingOrder;
         }
 
-        // Colliders
+        // 콜라이더
         if (e.colliders != null)
             foreach (var cd in e.colliders)
                 AddColliderEditor(root, cd);
 
-        // Tip (stick only)
+        // Tip (Stick 전용)
         if (isStick && e.tip.collider.kind != LevelData.ColliderKind.None)
         {
             var tip = new GameObject("Tip");
@@ -448,11 +414,12 @@ public class LevelConfigurator : MonoBehaviour
             tip.transform.SetParent(root.transform, false);
             tip.transform.localPosition = e.tip.localPosition;
             tip.transform.localRotation = Quaternion.Euler(0, 0, e.tip.localRotationZ);
-            tip.layer = root.layer; // Tip도 같은 레이어 사용
+            tip.layer = root.layer;
             AddColliderEditor(tip, e.tip.collider);
             Undo.AddComponent<GeneratedFlag>(tip);
         }
-        
+
+        // Obstacle에 Rigidbody2D 필요 시 복원
         if (type == SpawnMarker.SpawnType.Obstacle && e.hasRigidbody2D)
         {
             var rb = Undo.AddComponent<Rigidbody2D>(root);
@@ -462,128 +429,81 @@ public class LevelConfigurator : MonoBehaviour
             rb.gravityScale = e.rbGravityScale;
         }
     }
-    
-    private void CaptureCameraInitial()
-    {
-        // pick camera
-        var cam = initialCamera != null ? initialCamera : Camera.main;
-        if (cam == null)
-        {
-            Debug.LogWarning("[LevelConfigurator] No camera found to capture initial pose (initialCamera is null and Camera.main not found).");
-            levelData.cameraInitial = default;
-            return;
-        }
-
-        var tr = cam.transform;
-        var data = new LevelData.CameraInitData
-        {
-            position = tr.position,
-            rotationZ = tr.eulerAngles.z,
-            orthographicSize = cam.orthographic ? cam.orthographicSize : 0f,
-            fieldOfView = cam.orthographic ? 0f : cam.fieldOfView
-        };
-
-        levelData.cameraInitial = data;
-        // mark dirty handled already in SaveToLevelData(); but safe to ensure:
-        UnityEditor.EditorUtility.SetDirty(levelData);
-    }
-
-    private void ApplyCameraInitialOnLoad()
-    {
-        if (levelData == null)
-        {
-            Debug.LogWarning("[LevelConfigurator] No LevelData to apply camera initial.");
-            return;
-        }
-
-        var cam = initialCamera != null ? initialCamera : Camera.main;
-        if (cam == null)
-        {
-            Debug.LogWarning("[LevelConfigurator] No Camera found (initialCamera is null and no Camera.main).");
-            return;
-        }
-
-        var init = levelData.cameraInitial;
-
-        // Record for undo in editor
-        Undo.RecordObject(cam.transform, "Apply Camera Initial (LoadFromLevelData)");
-        Undo.RecordObject(cam, "Apply Camera Initial (LoadFromLevelData)");
-
-        // Position/Rotation
-        cam.transform.position = init.position;
-        cam.transform.rotation = Quaternion.Euler(0f, 0f, init.rotationZ);
-
-        // Size / FOV (apply only if a sensible value was saved)
-        if (cam.orthographic)
-        {
-            if (init.orthographicSize > 0f)
-                cam.orthographicSize = init.orthographicSize;
-        }
-        else
-        {
-            if (init.fieldOfView > 0f)
-                cam.fieldOfView = init.fieldOfView;
-        }
-    }
 
     private void AddColliderEditor(GameObject host, LevelData.Collider2DData d)
     {
         switch (d.kind)
         {
             case LevelData.ColliderKind.Box:
-                {
-                    var c = Undo.AddComponent<BoxCollider2D>(host);
-                    c.isTrigger = d.isTrigger;
-                    c.offset = d.offset;
-                    c.size = d.size;
-                    break;
-                }
+                { var c = Undo.AddComponent<BoxCollider2D>(host); c.isTrigger = d.isTrigger; c.offset = d.offset; c.size = d.size; break; }
             case LevelData.ColliderKind.Circle:
-                {
-                    var c = Undo.AddComponent<CircleCollider2D>(host);
-                    c.isTrigger = d.isTrigger;
-                    c.offset = d.offset;
-                    c.radius = d.radius;
-                    break;
-                }
+                { var c = Undo.AddComponent<CircleCollider2D>(host); c.isTrigger = d.isTrigger; c.offset = d.offset; c.radius = d.radius; break; }
             case LevelData.ColliderKind.Capsule:
-                {
-                    var c = Undo.AddComponent<CapsuleCollider2D>(host);
-                    c.isTrigger = d.isTrigger;
-                    c.offset = d.offset;
-                    c.size = d.size;
-                    c.direction = d.capsuleDirection;
-                    break;
-                }
+                { var c = Undo.AddComponent<CapsuleCollider2D>(host); c.isTrigger = d.isTrigger; c.offset = d.offset; c.size = d.size; c.direction = d.capsuleDirection; break; }
             case LevelData.ColliderKind.Polygon:
                 {
                     var c = Undo.AddComponent<PolygonCollider2D>(host);
-                    c.isTrigger = d.isTrigger;
-                    c.offset = d.offset;
+                    c.isTrigger = d.isTrigger; c.offset = d.offset;
                     if (d.paths != null && d.paths.Length > 0)
                     {
                         c.pathCount = d.paths.Length;
-                        for (int i = 0; i < d.paths.Length; i++)
-                            c.SetPath(i, d.paths[i].points);
+                        for (int i = 0; i < d.paths.Length; i++) c.SetPath(i, d.paths[i].points);
                     }
                     break;
                 }
             case LevelData.ColliderKind.Edge:
-                {
-                    var c = Undo.AddComponent<EdgeCollider2D>(host);
-                    c.isTrigger = d.isTrigger;
-                    c.offset = d.offset;
-                    if (d.edgePoints != null && d.edgePoints.Length > 0)
-                        c.points = d.edgePoints;
-                    break;
-                }
+                { var c = Undo.AddComponent<EdgeCollider2D>(host); c.isTrigger = d.isTrigger; c.offset = d.offset; if (d.edgePoints != null) c.points = d.edgePoints; break; }
             case LevelData.ColliderKind.None:
-            default:
-                break;
+            default: break;
         }
     }
 
-    // Marker component used to identify generated preview objects
+    // 카메라 초기값 저장/적용
+    private void CaptureCameraInitial()
+    {
+        var cam = initialCamera ? initialCamera : Camera.main;
+        if (cam == null)
+        {
+            Debug.LogWarning("[LevelConfigurator] No camera to capture.");
+            levelData.cameraInitial = default;
+            return;
+        }
+
+        levelData.cameraInitial = new LevelData.CameraInitData
+        {
+            position = cam.transform.position,         // ← Z 포함
+            rotationZ = cam.transform.eulerAngles.z,
+            orthographicSize = cam.orthographic ? cam.orthographicSize : 0f,
+            fieldOfView      = cam.orthographic ? 0f : cam.fieldOfView
+        };
+
+        EditorUtility.SetDirty(levelData);
+    }
+
+    private void ApplyCameraInitialOnLoad()
+    {
+        var cam = initialCamera ? initialCamera : Camera.main;
+        if (!cam) { Debug.LogWarning("[LevelConfigurator] No Camera found to apply initial."); return; }
+
+        var init = levelData.cameraInitial;
+
+        Undo.RecordObject(cam.transform, "Apply Camera Initial");
+        Undo.RecordObject(cam, "Apply Camera Initial");
+
+        cam.transform.position = init.position;               // ← Z 포함
+        cam.transform.rotation = Quaternion.Euler(0, 0, init.rotationZ);
+
+        if (cam.orthographic)
+        {
+            if (init.orthographicSize > 0f) cam.orthographicSize = init.orthographicSize;
+        }
+        else
+        {
+            if (init.fieldOfView > 0f) cam.fieldOfView = init.fieldOfView;
+        }
+    }
+
+    // 생성물 식별 플래그
     private class GeneratedFlag : MonoBehaviour { }
 #endif // UNITY_EDITOR
 }

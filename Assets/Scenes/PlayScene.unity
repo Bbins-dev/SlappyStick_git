@@ -209,7 +209,7 @@ Transform:
   m_GameObject: {fileID: 519420028}
   serializedVersion: 2
   m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
-  m_LocalPosition: {x: 30, y: 3.56, z: -10}
+  m_LocalPosition: {x: 30, y: 3.56, z: -100}
   m_LocalScale: {x: 1, y: 1, z: 1}
   m_ConstrainProportionsScale: 0
   m_Children: []
@@ -227,12 +227,16 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: a74d1530daefb9440bd041924c1738fd, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
+  replayOverride: 0
   initialTarget: {fileID: 0}
   initialFocusDuration: 1.5
   positioningCamX: 0
   positioningCamY: 3.56
   positioningCamThreshold: 0.5
   positioningCamSpeed: 5
+  autoFindInitialByTag: 1
+  initialTargetTag: Target
+  pickClosestTaggedToStick: 1
   target: {fileID: 0}
   offset: {x: 0, y: 0, z: -10}
   followSmoothSpeed: 8

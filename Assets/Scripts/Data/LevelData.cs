@@ -65,7 +65,7 @@ public class LevelData : ScriptableObject
         public int layer;
 
         [Header("Transform")]
-        public Vector2 position;     // world pos for root entity
+        public Vector3 position;     // world pos for root entity
         public float rotationZ;
         public Vector2 scale;
 
