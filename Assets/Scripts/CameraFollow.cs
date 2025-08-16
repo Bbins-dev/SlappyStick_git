@@ -69,7 +69,6 @@ public class CameraFollow : MonoBehaviour
     private StickMove stickMove;
     private float     targetStartY;
     private bool      triedAutoBindOnce = false;
-    private bool initialApplied = false;
 
     // ───────────────────────────────────────────────────────────
 
@@ -199,8 +198,6 @@ public class CameraFollow : MonoBehaviour
             else if (!cam.orthographic && init.fieldOfView > 0f)
                 cam.fieldOfView = init.fieldOfView;
         }
-
-        initialApplied = true;
     }
 
     // 리플레이 진입/해제
