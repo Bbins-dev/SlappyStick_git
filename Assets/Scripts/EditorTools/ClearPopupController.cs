@@ -380,68 +380,115 @@ public class ClearPopupController : MonoBehaviour
     /// - Unloads ALL scenes that contain a LevelManager (handles duplicates)
     /// - Reloads one of them additively (Editor supports non-build scenes)
     /// </summary>
+    // ClearPopupController.cs 안에 추가/교체
     private IEnumerator RestartGameplaySceneKeepUI()
     {
         Time.timeScale = 1f;
 
-        // 1) 현재 로드된 모든 씬 중에서 LevelManager가 "실제로 존재"하는 씬만 수집
-        var gameplayScenes = new List<Scene>();
-        for (int i = 0; i < SceneManager.sceneCount; i++)
-        {
-            var s = SceneManager.GetSceneAt(i);
-            if (!s.IsValid() || !s.isLoaded) continue;
+        // 1) 임시 홀드 카메라 생성 → 카메라 공백 프레임 방지
+        var tempCam = SpawnTempHoldCamera();
 
-            var roots = s.GetRootGameObjects();
-            bool hasLM = false;
-            foreach (var r in roots)
+        // 2) 재시작할 "게임플레이 씬"을 확실하게 잡는다 (LevelManager가 들어있는 씬)
+        Scene gameplayScene = default;
+        var lm = FindObjectOfType<LevelManager>();
+        if (lm != null)
+            gameplayScene = lm.gameObject.scene;
+
+        bool hasGameplay = gameplayScene.IsValid() && gameplayScene.isLoaded;
+
+        // 폴백(거의 안 탐): 기존 스캔 로직
+        if (!hasGameplay)
+        {
+            for (int i = 0; i < SceneManager.sceneCount; i++)
             {
-                if (!r) continue;
-                if (r.GetComponentInChildren<LevelManager>(true) != null) { hasLM = true; break; }
+                var s = SceneManager.GetSceneAt(i);
+                if (!s.IsValid() || !s.isLoaded) continue;
+                foreach (var r in s.GetRootGameObjects())
+                {
+                    if (r && r.GetComponentInChildren<LevelManager>(true) != null)
+                    {
+                        gameplayScene = s;
+                        hasGameplay = true;
+                        break;
+                    }
+                }
+                if (hasGameplay) break;
             }
-            if (hasLM) gameplayScenes.Add(s);
         }
 
-        // 2) 가드: 못 찾았다면(아주 드문 케이스) 활성 씬을 Single로 리로드
-        if (gameplayScenes.Count == 0)
+        // 그래도 못 찾으면: 활성 씬을 Single로 재로드(최후) — 하지만 임시 카메라가 있으니 깜빡임 없음
+        if (!hasGameplay)
         {
             var active = SceneManager.GetActiveScene();
-            Debug.LogWarning("[ClearPopup] No LevelManager scenes found. Reloading active scene (Single) as fallback.");
             yield return SceneManager.LoadSceneAsync(active.name, LoadSceneMode.Single);
+            CleanupTempHoldCamera(tempCam);
             yield break;
         }
 
-        // 3) 다시 로드할 타겟 결정(가능하면 활성 씬, 아니면 목록 첫 번째)
-        var activeScene = SceneManager.GetActiveScene();
-        Scene target = gameplayScenes.Contains(activeScene) ? activeScene : gameplayScenes[0];
-
-        string reloadName = target.name;
-        string reloadPath = target.path;
-#if UNITY_EDITOR
+        string reloadName = gameplayScene.name;
+    #if UNITY_EDITOR
+        string reloadPath = gameplayScene.path;
         bool inBuild = SceneUtility.GetBuildIndexByScenePath(reloadPath) >= 0;
-#endif
+    #endif
 
-        // 4) 게임플레이 씬들만 언로드(UI 씬은 남김)
-        foreach (var sc in gameplayScenes)
-            yield return SceneManager.UnloadSceneAsync(sc);
+        // 3) 해당 게임플레이 씬만 언로드 (UI 씬은 남겨둠)
+        yield return SceneManager.UnloadSceneAsync(gameplayScene);
 
-        // 5) 게임플레이 씬 하나만 애드티브 재로딩
-#if UNITY_EDITOR
+        // 4) 게임플레이 씬 재로드 (애드티브)
+    #if UNITY_EDITOR
         if (!inBuild && !string.IsNullOrEmpty(reloadPath))
         {
             var pars = new LoadSceneParameters(LoadSceneMode.Additive);
-            yield return EditorSceneManager.LoadSceneAsyncInPlayMode(reloadPath, pars);
+            yield return UnityEditor.SceneManagement.EditorSceneManager.LoadSceneAsyncInPlayMode(reloadPath, pars);
         }
         else
         {
             yield return SceneManager.LoadSceneAsync(reloadName, LoadSceneMode.Additive);
         }
-#else
+    #else
         yield return SceneManager.LoadSceneAsync(reloadName, LoadSceneMode.Additive);
-#endif
+    #endif
 
-        // 6) 활성 씬 지정 + 팝업 닫기
+        // 5) 활성 씬 지정
         var reloaded = SceneManager.GetSceneByName(reloadName);
         if (reloaded.IsValid()) SceneManager.SetActiveScene(reloaded);
+
+        // 6) 메인카메라가 살아났는지 한두 프레임 기다렸다가 임시 카메라 제거
+        for (int i = 0; i < 3; i++)
+        {
+            if (Camera.main != null && Camera.main.enabled) break;
+            yield return null;
+        }
+        CleanupTempHoldCamera(tempCam);
+
+        // 7) 팝업 닫기
         Hide();
+    }
+
+    // ----- 임시 카메라 유틸 -----
+    private Camera SpawnTempHoldCamera()
+    {
+        var go = new GameObject("~TempHoldCamera");
+        DontDestroyOnLoad(go);
+
+        var cam = go.AddComponent<Camera>();
+        cam.clearFlags = CameraClearFlags.SolidColor;
+        cam.backgroundColor = Color.black;
+        cam.cullingMask = 0;        // 아무 것도 렌더링하지 않지만, '카메라 있음' 상태가 되어 경고/깜빡임 방지
+        cam.depth = -10000;
+        cam.orthographic = true;
+        cam.orthographicSize = 5;
+        cam.nearClipPlane = 0.3f;
+        cam.farClipPlane = 1000f;
+        cam.targetDisplay = 0;      // Display 1
+        go.tag = "Untagged";
+        go.hideFlags = HideFlags.DontSave;
+        return cam;
+    }
+
+    private void CleanupTempHoldCamera(Camera c)
+    {
+        if (c != null && c.gameObject != null)
+            Destroy(c.gameObject);
     }
 }
