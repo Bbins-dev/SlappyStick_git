@@ -361,7 +361,7 @@ public class LevelConfigurator : MonoBehaviour
     private void ClearGeneratedChildren(Transform parent)
     {
         if (parent == null) return;
-        var flags = parent.GetComponentsInChildren<GeneratedFlag>(true);
+        var flags = parent.GetComponentsInChildren<PreviewGeneratedFlag>(true);
         for (int i = flags.Length - 1; i >= 0; i--)
             Undo.DestroyObjectImmediate(flags[i].gameObject);
     }
@@ -389,7 +389,7 @@ public class LevelConfigurator : MonoBehaviour
         // 마커 & 정리 플래그
         var marker = Undo.AddComponent<SpawnMarker>(root);
         marker.type = type;
-        Undo.AddComponent<GeneratedFlag>(root);
+        Undo.AddComponent<PreviewGeneratedFlag>(root);
 
         // 비주얼
         if (e.sprite != null)
@@ -416,7 +416,7 @@ public class LevelConfigurator : MonoBehaviour
             tip.transform.localRotation = Quaternion.Euler(0, 0, e.tip.localRotationZ);
             tip.layer = root.layer;
             AddColliderEditor(tip, e.tip.collider);
-            Undo.AddComponent<GeneratedFlag>(tip);
+            Undo.AddComponent<PreviewGeneratedFlag>(tip);
         }
 
         // Obstacle에 Rigidbody2D 필요 시 복원
@@ -504,6 +504,6 @@ public class LevelConfigurator : MonoBehaviour
     }
 
     // 생성물 식별 플래그
-    private class GeneratedFlag : MonoBehaviour { }
+    // private class GeneratedFlag : MonoBehaviour { }
 #endif // UNITY_EDITOR
 }
