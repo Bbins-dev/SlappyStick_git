@@ -207,7 +207,9 @@ public class StickMove : MonoBehaviour
         if (Input.GetMouseButtonDown(0))
         {
             isHolding = true;
-
+            
+            ReplayManager.Instance?.TryDeleteCache(); // ★ 캐시 있을 시 제거
+    
             // ★★★ 리플레이 시작 (발사 커밋 시점)
             ReplayManager.Instance?.BeginRecording(transform);
 
@@ -420,8 +422,7 @@ public class StickMove : MonoBehaviour
     // ---------------------- Reset ----------------------
     private void ResetStick()
     {
-        // ★★★ 실패(리스폰): 끝내고 캐시 삭제
-        ReplayManager.Instance?.EndRecording(keepFile: false);
+        ReplayManager.Instance?.EndRecording(false); //녹화 종료
 
         rb.velocity = Vector2.zero;
         rb.angularVelocity = 0f;

@@ -86,7 +86,7 @@ public class LevelManager : MonoBehaviour
                 BuildEntity(f, isStick: false, isObstacle: false);
         }
 
-            var cam = FindWorldCamera();
+        var cam = FindWorldCamera();
         var camFollow = cam ? cam.GetComponent<CameraFollow>() : null;
         if (camFollow != null && stickGo != null)
         {
@@ -374,6 +374,6 @@ public class LevelManager : MonoBehaviour
         }
         return Camera.main; // 최후 보루
     }
-    
+
 
 }

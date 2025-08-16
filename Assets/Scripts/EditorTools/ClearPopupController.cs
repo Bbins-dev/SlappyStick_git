@@ -71,7 +71,6 @@ public class ClearPopupController : MonoBehaviour
         if (btnRestart) { btnRestart.onClick.RemoveAllListeners(); btnRestart.onClick.AddListener(OnClick_RestartLevel); }
         if (btnLevelSelect) { btnLevelSelect.onClick.RemoveAllListeners(); btnLevelSelect.onClick.AddListener(OnClick_LevelSelect); }
         if (btnNextLevel) { btnNextLevel.onClick.RemoveAllListeners(); btnNextLevel.onClick.AddListener(OnClick_NextLevel); }
-        if (btnSaveReplay) { btnSaveReplay.onClick.RemoveAllListeners(); btnSaveReplay.onClick.AddListener(OnClick_SaveReplay); }
         if (btnPlayReplay) { btnPlayReplay.onClick.RemoveAllListeners(); btnPlayReplay.onClick.AddListener(OnClick_PlayReplay); }
     }
 
@@ -154,6 +153,10 @@ public class ClearPopupController : MonoBehaviour
 
         if (btnNextLevel) btnNextLevel.interactable = canNext;
         if (nextLevelLabel) nextLevelLabel.text = canNext ? "Next Level" : "Next Level (Locked)";
+
+        // ★ 리플레이 캐시 유무로 PlayReplay 버튼 상태 갱신
+        bool hasReplay = ReplayManager.Instance && ReplayManager.Instance.HasCache;
+        if (btnPlayReplay) btnPlayReplay.interactable = hasReplay;
     }
 
     // ─────────────────────────────────────────────────────────────────────────
@@ -161,21 +164,18 @@ public class ClearPopupController : MonoBehaviour
     // ─────────────────────────────────────────────────────────────────────────
     public void OnClick_SaveScreenshot()
     {
-        ReplayManager.Instance?.TryDeleteCache(); // ★ 캐시 제거
-
         StartCoroutine(CaptureWorldOffscreenAndKeepPopup());
     }
 
     public void OnClick_RestartLevel()
     {
-        ReplayManager.Instance?.TryDeleteCache(); // ★ 캐시 제거
-
+        ReplayManager.Instance?.TryDeleteCache(); // ★ 리플레이 캐시 있을 시 제거
         StartCoroutine(RestartGameplaySceneKeepUI());
     }
 
     public void OnClick_LevelSelect()
     {
-        ReplayManager.Instance?.TryDeleteCache(); // ★ 캐시 제거
+        ReplayManager.Instance?.TryDeleteCache(); // ★ 리플레이 캐시 있을 시 제거
 
         // 팝업에서 나갈 때는 일시정지 해제
         Time.timeScale = 1f;
@@ -236,7 +236,7 @@ public class ClearPopupController : MonoBehaviour
 
     public void OnClick_NextLevel()
     {
-        ReplayManager.Instance?.TryDeleteCache(); // ★ 캐시 제거
+        ReplayManager.Instance?.TryDeleteCache(); // ★ 리플레이 캐시 있을 시 제거
 
         var gm = GameManager.Instance;
         if (gm == null) return;
@@ -255,6 +255,13 @@ public class ClearPopupController : MonoBehaviour
 
     public void OnClick_PlayReplay()
     {
+        // ★ 리플레이 캐시가 없으면 경고 후 종료
+        if (!(ReplayManager.Instance && ReplayManager.Instance.HasCache))
+        {
+            Debug.LogWarning("[Replay] No cached replay to play.");
+            return;
+        }
+
         // 팝업을 잠깐 닫아 시야/입력/타임스케일 정상화
         Hide(); // pauseOnShow=true면 여기서 Time.timeScale=1로 복귀
 
@@ -271,48 +278,6 @@ public class ClearPopupController : MonoBehaviour
         {
             Show(); // 다시 Pause 상태로 팝업 복귀
         });
-    }
-
-    public void OnClick_SaveReplay()
-    {
-        // 1) 캐시 파일 존재 확인
-        var src = ReplayManager.CacheFilePath;
-        if (!System.IO.File.Exists(src))
-        {
-            Debug.LogWarning("[Replay] No cached file to save.");
-            return;
-        }
-
-        // 2) 고유 파일명 만들기 (중복 방지)
-        string dstDir = Application.persistentDataPath;
-        string fileName = $"StickIt_Replay_{System.DateTime.Now:yyyyMMdd_HHmmss_fff}.replay";
-        string dst = System.IO.Path.Combine(dstDir, fileName);
-        dst = MakeUniquePath(dst); // ← 아래 헬퍼
-
-        try
-        {
-            System.IO.File.Copy(src, dst, overwrite: false);
-            Debug.Log($"[Replay] Saved: {dst}");
-
-            // 3) 가능한 경우 공유(모바일에서 특히 유용)
-            if (!TryShareFile(dst, "application/octet-stream"))
-            {
-#if UNITY_EDITOR
-                // 에디터에선 폴더 열어주기
-                UnityEditor.EditorUtility.RevealInFinder(dst);
-#elif UNITY_STANDALONE
-                // PC/Mac 플레이어에선 폴더 열기
-                OpenFolder(System.IO.Path.GetDirectoryName(dst));
-#else
-                // 모바일에서 플러그인 없으면 경로만 로그
-                Debug.Log($"[Replay] Saved to: {dst}");
-#endif
-            }
-        }
-        catch (System.Exception e)
-        {
-            Debug.LogWarning($"[Replay] Save failed: {e.Message}");
-        }
     }
 
     // ─────────────────────────────────────────────────────────────────────────
@@ -478,85 +443,5 @@ public class ClearPopupController : MonoBehaviour
         var reloaded = SceneManager.GetSceneByName(reloadName);
         if (reloaded.IsValid()) SceneManager.SetActiveScene(reloaded);
         Hide();
-    }
-
-    private static string MakeUniquePath(string path)
-    {
-        if (!System.IO.File.Exists(path)) return path;
-        string dir = System.IO.Path.GetDirectoryName(path);
-        string name = System.IO.Path.GetFileNameWithoutExtension(path);
-        string ext = System.IO.Path.GetExtension(path);
-        int i = 2;
-        string candidate;
-        do
-        {
-            candidate = System.IO.Path.Combine(dir, $"{name} ({i}){ext}");
-            i++;
-        } while (System.IO.File.Exists(candidate));
-        return candidate;
-    }
-
-    private static void OpenFolder(string directoryPath)
-    {
-        if (string.IsNullOrEmpty(directoryPath)) return;
-#if UNITY_STANDALONE_OSX
-        System.Diagnostics.Process.Start("open", directoryPath);
-#elif UNITY_STANDALONE_WIN
-        System.Diagnostics.Process.Start("explorer.exe", directoryPath.Replace("/", "\\"));
-#else
-        Application.OpenURL("file://" + directoryPath);
-#endif
-    }
-    
-    private static bool TryShareFile(string path, string mime)
-    {
-        // (A) NativeShare 플러그인이 프로젝트에 있으면 사용
-        //     https://github.com/yasirkula/UnityNativeShare  (무료)
-        var nsType = System.Type.GetType("NativeShare,Assembly-CSharp");
-        if (nsType == null) nsType = System.Type.GetType("NativeShare"); // 일부 프로젝트명 환경 대비
-        if (nsType != null)
-        {
-            try
-            {
-                object ns = System.Activator.CreateInstance(nsType);
-                // 체이닝 메서드 리플렉션 (AddFile → SetSubject → SetText → SetMime → Share)
-                object current = ns;
-
-                MethodInfo AddFile     = nsType.GetMethod("AddFile");
-                MethodInfo SetSubject  = nsType.GetMethod("SetSubject");
-                MethodInfo SetText     = nsType.GetMethod("SetText");
-                MethodInfo SetCallback = nsType.GetMethod("SetCallback"); // 선택
-                MethodInfo SetTarget   = nsType.GetMethod("SetTarget");   // 선택
-                MethodInfo Share       = nsType.GetMethod("Share");
-                MethodInfo SetMime     = nsType.GetMethod("SetMime");     // 최신 버전에 있음
-
-                if (AddFile != null)    current = AddFile.Invoke(current, new object[] { path });
-                if (SetMime != null)     current = SetMime.Invoke(current, new object[] { mime });
-                if (SetSubject != null)  current = SetSubject.Invoke(current, new object[] { "Stick It! Replay" });
-                if (SetText != null)     current = SetText.Invoke(current, new object[] { "Recently recorded replay file." });
-                if (Share != null)       Share.Invoke(current, null);
-
-                Debug.Log("[Replay] Share sheet opened via NativeShare.");
-                return true;
-            }
-            catch (System.Exception e)
-            {
-                Debug.LogWarning($"[Replay] NativeShare reflection failed: {e.Message}");
-                // 폴백으로 내려감
-            }
-        }
-
-    #if UNITY_ANDROID
-        // (B) 안드로이드: 플러그인 없이 공유 인텐트 직접 띄우는 건
-        //     Android 7+ 부터 FileUriExposed 예외/권한 문제가 많아 비권장.
-        //     플러그인 권장(위 NativeShare). 여기선 false 반환해 폴백 처리.
-        return false;
-    #elif UNITY_IOS
-        // (C) iOS: 마찬가지로 UIActivityViewController는 네이티브 플러그인 필요.
-        return false;
-    #else
-        // (D) PC/Mac: 공유 시트 개념이 표준이 아님 → false
-        return false;
-    #endif
     }
 }
