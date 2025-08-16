@@ -59,7 +59,7 @@ MonoBehaviour:
   - name: Target
     tag: Target
     layer: 7
-    position: {x: 23.73893, y: 1.6584063, z: 0.19244717}
+    position: {x: 23.73893, y: 1.6584063, z: 0}
     rotationZ: 0
     scale: {x: 0.63, y: 0.63}
     sprite: {fileID: 21300000, guid: c8b256648fe0ce043acb77061f153659, type: 3}
@@ -93,7 +93,7 @@ MonoBehaviour:
   - name: obstacle_hat_low
     tag: Obstacle
     layer: 8
-    position: {x: 10.06, y: 8.098406, z: -3}
+    position: {x: 10.06, y: 8.098406, z: -2}
     rotationZ: 0
     scale: {x: 0.59, y: 0.46484852}
     sprite: {fileID: 21300000, guid: f79221b761e65a4438d739f38f9eb621, type: 3}
@@ -126,7 +126,7 @@ MonoBehaviour:
   - name: Obstacle
     tag: Obstacle
     layer: 8
-    position: {x: 16.908928, y: 1.9284058, z: 0.19244717}
+    position: {x: 16.908928, y: 1.9284058, z: 0}
     rotationZ: 0
     scale: {x: 0.47999996, y: 0.47999996}
     sprite: {fileID: 21300000, guid: f8f4d56e4058ec84cb0a157748794721, type: 3}
@@ -160,7 +160,7 @@ MonoBehaviour:
   - name: Fulcrum
     tag: Fulcrum
     layer: 10
-    position: {x: -0.6899996, y: 0.9484062, z: 10}
+    position: {x: -0.6899996, y: 0.9484062, z: 0}
     rotationZ: 0
     scale: {x: 0.32, y: 0.32}
     sprite: {fileID: 21300000, guid: a5227b487774887439366633326fa110, type: 3}
@@ -193,7 +193,7 @@ MonoBehaviour:
   - name: obstacle_human
     tag: Fulcrum
     layer: 10
-    position: {x: 10.09, y: 1.5484056, z: -2}
+    position: {x: 10.09, y: 1.5484056, z: -1}
     rotationZ: 0
     scale: {x: 1.5999999, y: 1.5999999}
     sprite: {fileID: 21300000, guid: 800b9ab47703f8e4eb9d86ec4390672c, type: 3}
