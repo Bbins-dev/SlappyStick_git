@@ -93,7 +93,7 @@ MonoBehaviour:
   - name: target_chicken
     tag: Obstacle
     layer: 8
-    position: {x: 14.468928, y: 1.6584063, z: 0}
+    position: {x: 14.468928, y: 1.6584063, z: 1}
     rotationZ: 0
     scale: {x: 0.63, y: 0.63}
     sprite: {fileID: 21300000, guid: c8b256648fe0ce043acb77061f153659, type: 3}
@@ -126,7 +126,7 @@ MonoBehaviour:
   - name: target_chicken (1)
     tag: Obstacle
     layer: 8
-    position: {x: 20.21893, y: 1.6584063, z: 0}
+    position: {x: 20.21893, y: 1.6584063, z: 1}
     rotationZ: 0
     scale: {x: 0.63, y: 0.63}
     sprite: {fileID: 21300000, guid: c8b256648fe0ce043acb77061f153659, type: 3}
@@ -159,7 +159,7 @@ MonoBehaviour:
   - name: target_chicken (2)
     tag: Obstacle
     layer: 8
-    position: {x: 32.528927, y: 1.6584063, z: 0}
+    position: {x: 32.528927, y: 1.6584063, z: 1}
     rotationZ: 0
     scale: {x: 0.63, y: 0.63}
     sprite: {fileID: 21300000, guid: c8b256648fe0ce043acb77061f153659, type: 3}
@@ -192,7 +192,7 @@ MonoBehaviour:
   - name: target_chicken (3)
     tag: Obstacle
     layer: 8
-    position: {x: 8.208928, y: 1.6584063, z: 0}
+    position: {x: 8.208928, y: 1.6584063, z: 1}
     rotationZ: 0
     scale: {x: 0.63, y: 0.63}
     sprite: {fileID: 21300000, guid: c8b256648fe0ce043acb77061f153659, type: 3}
