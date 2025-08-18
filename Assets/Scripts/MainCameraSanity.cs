@@ -5,27 +5,25 @@ using UnityEngine.SceneManagement;
 [DefaultExecutionOrder(-900)]
 public class MainCameraSanity : MonoBehaviour
 {
-    public string uiCameraNameContains = "UICamera";
-    public bool autoRebind = true;
+    [Header("Masks")]
+    [Tooltip("Play 시작 시 카메라를 'UI만 제외한 모든 레이어'로 강제")]
+    public bool forceEverythingExceptUI = true;
+
+    [Tooltip("위 옵션을 끄면, 이 목록의 레이어들은 최소 포함되도록 보정")]
+    public string[] mustIncludeLayers = new[] { "Default","Stick","Target","Obstacle","Fulcrum" };
 
     void Awake()  { FixNow(); }
     void OnEnable()
     {
-        if (!autoRebind) return;
-        SceneManager.sceneLoaded        += OnSceneLoaded;
-        SceneManager.activeSceneChanged += OnActiveSceneChanged;
+        SceneManager.sceneLoaded        += (_,__) => FixNow();
+        SceneManager.activeSceneChanged += (_,__) => FixNow();
         StartCoroutine(RebindWhenMainAppears());
     }
     void OnDisable()
     {
-        if (!autoRebind) return;
-        SceneManager.sceneLoaded        -= OnSceneLoaded;
-        SceneManager.activeSceneChanged -= OnActiveSceneChanged;
+        SceneManager.sceneLoaded        -= (_,__) => FixNow();
+        SceneManager.activeSceneChanged -= (_,__) => FixNow();
     }
-
-    void OnSceneLoaded(Scene s, LoadSceneMode m)    => FixNow();
-    void OnActiveSceneChanged(Scene prev, Scene cur)=> FixNow();
-
     IEnumerator RebindWhenMainAppears()
     {
         float t = 0f;
@@ -40,35 +38,45 @@ public class MainCameraSanity : MonoBehaviour
     void FixNow()
     {
         var all = GameObject.FindObjectsOfType<Camera>(true);
-        Camera uiCam = null, worldCam = null;
+        Camera worldCam = null, uiCam = null;
 
         foreach (var c in all)
         {
-            bool looksUI = c.cullingMask == LayerMask.GetMask("UI") ||
-                           (!string.IsNullOrEmpty(uiCameraNameContains) && c.name.Contains(uiCameraNameContains));
-            if (looksUI) { uiCam = c; continue; }
-            worldCam ??= c;
+            bool looksUI = c.cullingMask == LayerMask.GetMask("UI") || c.name.Contains("UICamera");
+            if (looksUI) uiCam = c; else worldCam ??= c;
         }
-
-        if (worldCam == null)
-        {
-            Debug.LogWarning("[MainCameraSanity] No non-UI camera found.");
-            return;
-        }
+        if (!worldCam) return;
 
         if (uiCam != null && uiCam.CompareTag("MainCamera")) uiCam.tag = "Untagged";
         if (!worldCam.CompareTag("MainCamera")) worldCam.tag = "MainCamera";
-
         worldCam.enabled = true;
 
-        // ✅ Camera.targetDisplay는 0이 Display 1 임
-        if (worldCam.targetDisplay != 0)
-            worldCam.targetDisplay = 0; // Display 1
+        // ✅ Z 보정(깜빡임 방지)
+        if (Mathf.Abs(worldCam.transform.position.z) < 0.001f)
+            worldCam.transform.position += new Vector3(0,0,-10);
 
-        // 마스크가 비었거나 UI만이면 Everything으로 (UI만 제외하려면 필요에 맞게 수정)
-        if (worldCam.cullingMask == 0 || worldCam.cullingMask == LayerMask.GetMask("UI"))
-            worldCam.cullingMask = ~LayerMask.GetMask("UI");
+        // ✅ 마스크 보정
+        int uiLayer = LayerMask.NameToLayer("UI");
+        int uiMask  = uiLayer >= 0 ? (1 << uiLayer) : 0;
 
-        Debug.Log($"[MainCameraSanity] MainCamera = {worldCam.name}, targetDisplay(index)={worldCam.targetDisplay}, mask={worldCam.cullingMask}");
+        if (forceEverythingExceptUI)
+        {
+            worldCam.cullingMask = ~uiMask; // UI만 제외
+        }
+        else
+        {
+            int mask = worldCam.cullingMask;
+            // 핵심 레이어 최소 포함
+            foreach (var n in mustIncludeLayers)
+            {
+                int l = LayerMask.NameToLayer(n);
+                if (l >= 0) mask |= (1 << l);
+            }
+            // UI 제외
+            mask &= ~uiMask;
+            worldCam.cullingMask = mask;
+        }
+
+        Debug.Log($"[MainCameraSanity] Mask fixed: {LayerMask.LayerToName(uiLayer)} excluded, cam={worldCam.name}");
     }
 }

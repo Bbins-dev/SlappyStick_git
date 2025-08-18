@@ -21,7 +21,7 @@ MonoBehaviour:
     name: Stick
     tag: Stick
     layer: 3
-    position: {x: 0.10999966, y: 2}
+    position: {x: 0.10999966, y: 2, z: 10}
     rotationZ: 0
     scale: {x: 0.3, y: 0.16831176}
     sprite: {fileID: 21300000, guid: 02f45cb55c3c3d44ca696abd42ff0bcd, type: 3}
@@ -59,7 +59,7 @@ MonoBehaviour:
   - name: Target
     tag: Target
     layer: 7
-    position: {x: 26.248928, y: 1.6584063}
+    position: {x: 26.248928, y: 1.6584063, z: 0}
     rotationZ: 0
     scale: {x: 0.63, y: 0.63}
     sprite: {fileID: 21300000, guid: c8b256648fe0ce043acb77061f153659, type: 3}
@@ -93,7 +93,7 @@ MonoBehaviour:
   - name: Obstacle (1)
     tag: Obstacle
     layer: 8
-    position: {x: 9.518929, y: 1.938406}
+    position: {x: 9.518929, y: 1.938406, z: 0}
     rotationZ: 0
     scale: {x: 0.47999996, y: 0.47999996}
     sprite: {fileID: 21300000, guid: f8f4d56e4058ec84cb0a157748794721, type: 3}
@@ -126,7 +126,7 @@ MonoBehaviour:
   - name: Obstacle (2)
     tag: Obstacle
     layer: 8
-    position: {x: 9.518929, y: 5.828406}
+    position: {x: 9.518929, y: 5.828406, z: 0}
     rotationZ: 0
     scale: {x: 0.47999996, y: 0.47999996}
     sprite: {fileID: 21300000, guid: f8f4d56e4058ec84cb0a157748794721, type: 3}
@@ -159,7 +159,7 @@ MonoBehaviour:
   - name: Obstacle (6)
     tag: Obstacle
     layer: 8
-    position: {x: 14.878928, y: 1.938406}
+    position: {x: 14.878928, y: 1.938406, z: 0}
     rotationZ: 0
     scale: {x: 0.47999996, y: 0.47999996}
     sprite: {fileID: 21300000, guid: f8f4d56e4058ec84cb0a157748794721, type: 3}
@@ -192,7 +192,7 @@ MonoBehaviour:
   - name: Obstacle (7)
     tag: Obstacle
     layer: 8
-    position: {x: 14.878928, y: 5.828406}
+    position: {x: 14.878928, y: 5.828406, z: 0}
     rotationZ: 0
     scale: {x: 0.47999996, y: 0.47999996}
     sprite: {fileID: 21300000, guid: f8f4d56e4058ec84cb0a157748794721, type: 3}
@@ -225,7 +225,7 @@ MonoBehaviour:
   - name: Obstacle (8)
     tag: Obstacle
     layer: 8
-    position: {x: 14.878928, y: 9.728406}
+    position: {x: 14.878928, y: 9.728406, z: 0}
     rotationZ: 0
     scale: {x: 0.47999996, y: 0.47999996}
     sprite: {fileID: 21300000, guid: f8f4d56e4058ec84cb0a157748794721, type: 3}
@@ -258,7 +258,7 @@ MonoBehaviour:
   - name: Obstacle (3)
     tag: Obstacle
     layer: 8
-    position: {x: 9.518929, y: 9.728406}
+    position: {x: 9.518929, y: 9.728406, z: 0}
     rotationZ: 0
     scale: {x: 0.47999996, y: 0.47999996}
     sprite: {fileID: 21300000, guid: f8f4d56e4058ec84cb0a157748794721, type: 3}
@@ -291,7 +291,7 @@ MonoBehaviour:
   - name: Obstacle (5)
     tag: Obstacle
     layer: 8
-    position: {x: 9.518929, y: 13.668406}
+    position: {x: 9.518929, y: 13.668406, z: 0}
     rotationZ: 0
     scale: {x: 0.47999996, y: 0.47999996}
     sprite: {fileID: 21300000, guid: f8f4d56e4058ec84cb0a157748794721, type: 3}
@@ -324,7 +324,7 @@ MonoBehaviour:
   - name: Obstacle
     tag: Obstacle
     layer: 8
-    position: {x: 20.37893, y: 2.0384064}
+    position: {x: 20.37893, y: 2.0384064, z: 0}
     rotationZ: 0
     scale: {x: 0.47999996, y: 0.47999996}
     sprite: {fileID: 21300000, guid: f8f4d56e4058ec84cb0a157748794721, type: 3}
@@ -357,7 +357,7 @@ MonoBehaviour:
   - name: Obstacle (4)
     tag: Obstacle
     layer: 8
-    position: {x: 20.37893, y: 5.958406}
+    position: {x: 20.37893, y: 5.958406, z: 0}
     rotationZ: 0
     scale: {x: 0.47999996, y: 0.47999996}
     sprite: {fileID: 21300000, guid: f8f4d56e4058ec84cb0a157748794721, type: 3}
@@ -391,7 +391,7 @@ MonoBehaviour:
   - name: Fulcrum
     tag: Fulcrum
     layer: 0
-    position: {x: -0.6899996, y: 0.9484062}
+    position: {x: -0.6899996, y: 0.9484062, z: 0}
     rotationZ: 0
     scale: {x: 0.32, y: 0.32}
     sprite: {fileID: 21300000, guid: a5227b487774887439366633326fa110, type: 3}

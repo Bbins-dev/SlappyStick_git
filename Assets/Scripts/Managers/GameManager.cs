@@ -27,6 +27,9 @@ public class GameManager : MonoBehaviour
     public UnityEvent onStageCleared;
 
     public int TotalLevels => Database != null ? Database.Count : 0;
+    public int LastClearedLevel { get; private set; } = 0;
+
+    const string PendingLevelKey = "StickIt.PendingLevel";
 
     private void Awake()
     {
@@ -39,6 +42,8 @@ public class GameManager : MonoBehaviour
             // Optional but recommended: ensure this object is tagged for auto-find
             // Set the tag to "GameManager" in the Inspector (create the tag if needed).
 
+            ApplyPinnedLevelIfAny();
+
             // ✅ 보장: UnityEvent null 방지
             if (onStageCleared == null) onStageCleared = new UnityEvent();
         }
@@ -48,11 +53,33 @@ public class GameManager : MonoBehaviour
         }
     }
 
+    private void ApplyPinnedLevelIfAny()
+    {
+        if (PlayerPrefs.HasKey(PendingLevelKey))
+        {
+            int pinned = PlayerPrefs.GetInt(PendingLevelKey, 1);
+            CurrentLevel = Mathf.Clamp(pinned, 1, Mathf.Max(1, TotalLevels));
+            PlayerPrefs.DeleteKey(PendingLevelKey);
+            PlayerPrefs.Save();
+            Debug.Log($"[GameManager] Applied pinned level {CurrentLevel} on startup/reload.");
+        }
+    }
+
+    public void PinLevelForNextReload(int level)
+    {
+        int clamped = Mathf.Clamp(level, 1, TotalLevels);
+        CurrentLevel = clamped;                    // 즉시 메모리에도 반영
+        PlayerPrefs.SetInt(PendingLevelKey, clamped);
+        PlayerPrefs.Save();
+    }
+
     /// <summary>
     /// Called when the current level is cleared.
     /// </summary>
     public void StageClear()
     {
+        LastClearedLevel = CurrentLevel;
+        
         // Persist per-level clear flag
         PlayerPrefs.SetInt($"LevelCleared_{CurrentLevel}", 1);
 

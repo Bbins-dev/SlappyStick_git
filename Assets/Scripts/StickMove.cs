@@ -12,7 +12,7 @@ public class StickMove : MonoBehaviour
 
     [Header("Hold Settings")]
     [Tooltip("Maximum mouse hold time (seconds)")]
-    public float maxHoldTime = 0.5f;
+    public float maxHoldTime = 1f;
 
     [Header("Launch Settings")]
     [Tooltip("Maximum launch force at 100% hold")]
@@ -42,10 +42,10 @@ public class StickMove : MonoBehaviour
     public float idleOnSurfaceSeconds = 1f;
 
     [Tooltip("Linear speed under which the stick is considered idle (m/s)")]
-    public float idleSpeedThreshold = 0.05f;
+    public float idleSpeedThreshold = 0.1f;
 
     [Tooltip("Angular speed under which the stick is considered idle (deg/s)")]
-    public float idleAngularSpeedThreshold = 5f;
+    public float idleAngularSpeedThreshold = 7f;
 
     [Tooltip("Tags that trigger idle-reset when touching (e.g., Obstacle, Floor, Target)")]
     public string[] idleResetTags = new[] { "Obstacle", "Floor", "Target" };
@@ -100,7 +100,10 @@ public class StickMove : MonoBehaviour
     private int angularFlipCount = 0;
     private float angularFlipTimer = 0f;
     private float lastAngularVel = 0f;
-    private void OnDisable()  { ReplayManager.Instance?.EndRecording(false); }
+    private RigidbodyType2D _startBodyType;
+    private float _startGravity;
+    private RigidbodyConstraints2D _startConstraints;
+    private void OnDisable() { ReplayManager.Instance?.EndRecording(false); }
     private void OnDestroy()  { ReplayManager.Instance?.EndRecording(false); }
 
     [HideInInspector] public bool IsPositioning => isPositioning;
@@ -108,6 +111,16 @@ public class StickMove : MonoBehaviour
     void Start()
     {
         rb = GetComponent<Rigidbody2D>();
+
+        // 원래 상태 백업
+        _startBodyType   = rb.bodyType;
+        _startGravity    = rb.gravityScale;
+        _startConstraints= rb.constraints;
+
+        // 포지셔닝 진입: Y + 회전 잠금
+        isPositioning = true;
+        rb.constraints = RigidbodyConstraints2D.FreezePositionY | RigidbodyConstraints2D.FreezeRotation;
+
         startPosition = transform.position;
         startRotation = transform.rotation;
         originalConstraints = rb.constraints;
@@ -182,17 +195,31 @@ public class StickMove : MonoBehaviour
         if (Input.GetMouseButton(0))
         {
             Vector3 world = Camera.main.ScreenToWorldPoint(Input.mousePosition);
-            float clampedX = Mathf.Clamp(world.x,
+            float clampedX = Mathf.Clamp(
+                world.x,
                 startPosition.x - positionRange,
-                startPosition.x + positionRange);
+                startPosition.x + positionRange
+            );
             transform.position = new Vector3(clampedX, startPosition.y, startPosition.z);
         }
+
         if (Input.GetMouseButtonUp(0))
         {
+            // 포지셔닝 종료
             isPositioning = false;
-            rb.constraints = originalConstraints;
 
-            // reset shot timers just in case
+            // ✅ 물리 상태 강제 정상화 (공중부양 방지)
+            rb.bodyType = RigidbodyType2D.Dynamic;                  // 혹시 Kinematic 잔상 방지
+            if (Mathf.Approximately(rb.gravityScale, 0f))
+                rb.gravityScale = 1f;                               // 0이면 기본 중력 부여
+
+            // ✅ Freeze Y + Freeze Rotation 모두 해제 (회전 잠김 방지)
+            var restored = originalConstraints & ~(RigidbodyConstraints2D.FreezePositionY | RigidbodyConstraints2D.FreezeRotation);
+rb.constraints = restored;
+
+            rb.WakeUp();                                            // 슬립 상태면 깨우기
+
+            // shot 관련 버퍼/타이머 초기화
             shotTimer = 0f;
             stuckTimer = 0f;
             angularFlipCount = 0;

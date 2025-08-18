@@ -43,6 +43,8 @@ public class ClearPopupController : MonoBehaviour
 
     private Coroutine fxCo;
     private bool isShowing;
+    private int levelAtPopup = 0;
+
 
     private void Reset()
     {
@@ -86,6 +88,10 @@ public class ClearPopupController : MonoBehaviour
         if (pauseOnShow) Time.timeScale = 0f;
 
         RefreshButtons();
+
+        var gm = GameManager.Instance;
+        levelAtPopup = gm != null ? gm.CurrentLevel : 1;
+
         SetVisible(true, instant: false);
 
         if (firstSelected)
@@ -169,6 +175,9 @@ public class ClearPopupController : MonoBehaviour
 
     public void OnClick_RestartLevel()
     {
+        var gm = GameManager.Instance;
+        if (gm != null) gm.PinLevelForNextReload(gm.CurrentLevel);
+
         ReplayManager.Instance?.TryDeleteCache(); // ★ 리플레이 캐시 있을 시 제거
         StartCoroutine(RestartGameplaySceneKeepUI());
     }
@@ -236,22 +245,26 @@ public class ClearPopupController : MonoBehaviour
 
     public void OnClick_NextLevel()
     {
-        ReplayManager.Instance?.TryDeleteCache(); // ★ 리플레이 캐시 있을 시 제거
-
         var gm = GameManager.Instance;
         if (gm == null) return;
 
-        int next = gm.CurrentLevel + 1;
-        bool exists = next <= Mathf.Max(1, gm.TotalLevels);
+        // ✅ “클리어 당시 레벨” 우선, 없으면 팝업이 떴을 때 스냅샷, 그것도 없으면 현재값
+        int baseLevel =
+            (gm.LastClearedLevel > 0) ? gm.LastClearedLevel :
+            (levelAtPopup > 0 ? levelAtPopup : gm.CurrentLevel);
+
+        int next = baseLevel + 1;
+        bool exists   = next <= Mathf.Max(1, gm.TotalLevels);
         bool unlocked = next <= Mathf.Max(1, gm.highestUnlockedLevel);
 
         if (exists && unlocked)
         {
-            gm.SetCurrentLevel(next);
+            // 🔒 리로드 사이에 다른 스크립트가 값을 건드려도 확정되도록 핀으로 고정
+            gm.PinLevelForNextReload(next);
             StartCoroutine(RestartGameplaySceneKeepUI());
         }
-        // else: locked → button is already disabled
     }
+
 
     public void OnClick_PlayReplay()
     {

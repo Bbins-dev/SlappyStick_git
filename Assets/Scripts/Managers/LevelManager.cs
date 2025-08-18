@@ -46,18 +46,6 @@ public class LevelManager : MonoBehaviour
             return;
         }
 
-        // Clean parent
-        if (dynamicRoot == null)
-        {
-            var go = new GameObject("DynamicRoot");
-            dynamicRoot = go.transform;
-        }
-        else
-        {
-            for (int i = dynamicRoot.childCount - 1; i >= 0; i--)
-                Destroy(dynamicRoot.GetChild(i).gameObject);
-        }
-
         // Build
         // 1) Stick 먼저 생성
         var stickGo = BuildEntity(data.stick, isStick: true);
@@ -108,7 +96,6 @@ public class LevelManager : MonoBehaviour
         go.transform.position = e.position;
         go.transform.rotation = Quaternion.Euler(0, 0, e.rotationZ);
         go.transform.localScale = new Vector3(e.scale.x, e.scale.y, 1f);
-        go.layer = e.layer;
         go.layer = Mathf.Clamp(e.layer, 0, 31);
 
         if (!string.IsNullOrEmpty(e.tag))
