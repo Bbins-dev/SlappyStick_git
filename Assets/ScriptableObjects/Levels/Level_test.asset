@@ -21,10 +21,10 @@ MonoBehaviour:
     name: Stick
     tag: Stick
     layer: 3
-    position: {x: 0.10999966, y: 2}
+    position: {x: 0.10999966, y: 2, z: 0}
     rotationZ: 0
-    scale: {x: 0.3, y: 0.16831176}
-    sprite: {fileID: 21300000, guid: bce2a6a56656d1e48a750e57e0da9a62, type: 3}
+    scale: {x: 1, y: 1}
+    sprite: {fileID: 21300000, guid: 5e5ae2f56b7b48540975e522bd1360b8, type: 3}
     color: {r: 1, g: 1, b: 1, a: 1}
     sortingLayerName: Default
     sortingOrder: 0
@@ -59,7 +59,7 @@ MonoBehaviour:
   - name: target_chicken
     tag: Target
     layer: 7
-    position: {x: 24.02, y: 3}
+    position: {x: 24.02, y: 3, z: 0}
     rotationZ: 0
     scale: {x: 1, y: 1}
     sprite: {fileID: 21300000, guid: c8b256648fe0ce043acb77061f153659, type: 3}
@@ -93,7 +93,7 @@ MonoBehaviour:
   - name: Capsule
     tag: Obstacle
     layer: 8
-    position: {x: 8.95, y: 3.08}
+    position: {x: 8.95, y: 3.08, z: 0}
     rotationZ: 0
     scale: {x: 2.8913, y: 2.8913}
     sprite: {fileID: -9095717837082945937, guid: 207ee8102dd4143d288186ef0be518ee, type: 3}
@@ -103,8 +103,8 @@ MonoBehaviour:
     colliders:
     - kind: 3
       isTrigger: 0
-      offset: {x: 0.00000023841858, y: 0}
-      size: {x: 0.99999994, y: 1.9999999}
+      offset: {x: 0, y: 0}
+      size: {x: 1, y: 2}
       radius: 0
       capsuleDirection: 0
       paths: []
@@ -127,7 +127,7 @@ MonoBehaviour:
   - name: Fulcrum
     tag: Fulcrum
     layer: 0
-    position: {x: -0.6899996, y: 0.6384058}
+    position: {x: -0.6899996, y: 0.6384058, z: 0}
     rotationZ: 0
     scale: {x: 0.32, y: 0.32}
     sprite: {fileID: 21300000, guid: ab93e23940ca8e740b25bd51f9f21464, type: 3}
