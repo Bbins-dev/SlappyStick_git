@@ -18,7 +18,7 @@ public class ReplayPlayer : MonoBehaviour
     private bool isPlaying;
 
     // 카메라 핸들/복구 정보
-    private CameraFollow camFollow;
+    private StickItCamera camFollow;
     private Transform restoreFollow;     // 원래 Stick
     private Transform restoreInitial;    // 원래 첫 Target (없으면 Stick)
 
@@ -53,7 +53,7 @@ public class ReplayPlayer : MonoBehaviour
         PrepareCameraFollowTakeover();      // ← 카메라 팔로우 인계
 
         // 카메라가 리플레이 동안엔 초기/포지셔닝 연출 없이 바로 타겟만 따라가게
-        var camFollow = Camera.main ? Camera.main.GetComponent<CameraFollow>() : null;
+        var camFollow = Camera.main ? Camera.main.GetComponent<StickItCamera>() : null;
         camFollow?.SetReplayOverride(true, FindStickTarget());  // 아래 B에서 헬퍼 추가
 
         StartCoroutine(CoPlay());
@@ -143,7 +143,7 @@ public class ReplayPlayer : MonoBehaviour
     private void PrepareCameraFollowTakeover()
     {
         // 카메라 핸들
-        camFollow = Camera.main ? Camera.main.GetComponent<CameraFollow>() : null;
+        camFollow = Camera.main ? Camera.main.GetComponent<StickItCamera>() : null;
         if (camFollow == null) return;
 
         // 복구용 원래 타깃들
@@ -238,7 +238,7 @@ public class ReplayPlayer : MonoBehaviour
                 camFollow.ConfigureTargets(init, stick, resetTimers: true);
         }
 
-        Camera.main?.GetComponent<CameraFollow>()?.SetReplayOverride(false);
+        Camera.main?.GetComponent<StickItCamera>()?.SetReplayOverride(false);
 
         isPlaying = false;
 

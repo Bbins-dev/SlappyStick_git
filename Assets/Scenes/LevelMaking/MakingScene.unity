@@ -728,22 +728,21 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: a74d1530daefb9440bd041924c1738fd, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  replayOverride: 0
   initialTarget: {fileID: 0}
-  initialFocusDuration: 1.5
-  positioningCamX: 0
-  positioningCamY: 3.56
-  positioningCamThreshold: 0.5
-  positioningCamSpeed: 5
-  autoFindInitialByTag: 1
-  initialTargetTag: Target
-  pickClosestTaggedToStick: 1
+  initialFocusDuration: 1.2
+  initialFocusLerp: 5
+  positioningCamXY: {x: 0, y: 3.56}
+  positioningMoveSpeed: 15
+  positioningMoveLerp: 1
+  positioningArriveThreshold: 0.5
+  initialZoomSize: 8
+  travelZoomOutSize: 11
+  positioningZoomInSize: 4
+  playZoomSize: 10
+  zoomLerp: 8
   target: {fileID: 0}
   offset: {x: 0, y: 0, z: -10}
-  followSmoothSpeed: 8
-  baseOrthographicSize: 7
-  zoomFactor: 0.5
-  zoomSmoothSpeed: 8
+  followLerp: 8
 --- !u!1 &576359913
 GameObject:
   m_ObjectHideFlags: 0

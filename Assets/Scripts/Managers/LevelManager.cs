@@ -75,7 +75,7 @@ public class LevelManager : MonoBehaviour
         }
 
         var cam = FindWorldCamera();
-        var camFollow = cam ? cam.GetComponent<CameraFollow>() : null;
+        var camFollow = cam ? cam.GetComponent<StickItCamera>() : null;
         if (camFollow != null && stickGo != null)
         {
             camFollow.ApplyInitial(data.cameraInitial);

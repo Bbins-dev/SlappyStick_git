@@ -81,7 +81,7 @@ public class StickMove : MonoBehaviour
     private bool isHolding = false;
     private bool hasLaunched = false;
     private float holdTime = 0f;
-    private CameraFollow cameraFollow;
+    private StickItCamera cameraFollow;
 
     private int surfaceContacts = 0;
     private float surfaceIdleTimer = 0f;
@@ -139,7 +139,7 @@ public class StickMove : MonoBehaviour
         if (holdTimeTMP != null)
             holdTimeTMP.gameObject.SetActive(false);
 
-        cameraFollow = Camera.main ? Camera.main.GetComponent<CameraFollow>() : null;
+        cameraFollow = Camera.main ? Camera.main.GetComponent<StickItCamera>() : null;
         HideMessage();
 
         // NEW: init ring buffer for progress window
