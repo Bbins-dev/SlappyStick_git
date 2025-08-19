@@ -13,9 +13,9 @@ MonoBehaviour:
   m_Name: Level_A_005
   m_EditorClassIdentifier: 
   cameraInitial:
-    position: {x: 26.33, y: 8.61, z: -10}
+    position: {x: 0, y: 0, z: 0}
     rotationZ: 0
-    orthographicSize: 7
+    orthographicSize: 0
     fieldOfView: 0
   stick:
     name: Stick
@@ -31,7 +31,7 @@ MonoBehaviour:
     colliders:
     - kind: 1
       isTrigger: 0
-      offset: {x: -0.13, y: 0.18}
+      offset: {x: -0.01, y: 0.06}
       size: {x: 8.08, y: 0.9}
       radius: 0
       capsuleDirection: 0
@@ -59,7 +59,7 @@ MonoBehaviour:
   - name: Target
     tag: Target
     layer: 7
-    position: {x: 26.268929, y: 1.6584063, z: -2}
+    position: {x: 23.73893, y: 1.6584063, z: 0}
     rotationZ: 0
     scale: {x: 0.63, y: 0.63}
     sprite: {fileID: 21300000, guid: c8b256648fe0ce043acb77061f153659, type: 3}
@@ -90,27 +90,27 @@ MonoBehaviour:
         paths: []
         edgePoints: []
   obstacles:
-  - name: target_chicken
+  - name: obstacle_hat_low
     tag: Obstacle
     layer: 8
-    position: {x: 14.468928, y: 1.6584063, z: 1}
+    position: {x: 10.06, y: 8.098406, z: -2}
     rotationZ: 0
-    scale: {x: 0.63, y: 0.63}
-    sprite: {fileID: 21300000, guid: c8b256648fe0ce043acb77061f153659, type: 3}
+    scale: {x: 0.59, y: 0.46484852}
+    sprite: {fileID: 21300000, guid: f79221b761e65a4438d739f38f9eb621, type: 3}
     color: {r: 1, g: 1, b: 1, a: 1}
     sortingLayerName: Default
     sortingOrder: 0
     colliders:
-    - kind: 3
+    - kind: 1
       isTrigger: 0
-      offset: {x: 0.3, y: -2.51}
-      size: {x: 6.66, y: 0.04}
+      offset: {x: -0.09, y: 1.27}
+      size: {x: 3.35, y: 2.4}
       radius: 0
-      capsuleDirection: 1
+      capsuleDirection: 0
       paths: []
       edgePoints: []
-    hasRigidbody2D: 1
-    rbGravityScale: 1
+    hasRigidbody2D: 0
+    rbGravityScale: 0
     tip:
       localPosition: {x: 0, y: 0}
       localRotationZ: 0
@@ -123,89 +123,23 @@ MonoBehaviour:
         capsuleDirection: 0
         paths: []
         edgePoints: []
-  - name: target_chicken (1)
+  - name: Obstacle
     tag: Obstacle
     layer: 8
-    position: {x: 20.21893, y: 1.6584063, z: 1}
+    position: {x: 16.908928, y: 1.9284058, z: 0}
     rotationZ: 0
-    scale: {x: 0.63, y: 0.63}
-    sprite: {fileID: 21300000, guid: c8b256648fe0ce043acb77061f153659, type: 3}
+    scale: {x: 0.47999996, y: 0.47999996}
+    sprite: {fileID: 21300000, guid: f8f4d56e4058ec84cb0a157748794721, type: 3}
     color: {r: 1, g: 1, b: 1, a: 1}
     sortingLayerName: Default
     sortingOrder: 0
     colliders:
     - kind: 3
       isTrigger: 0
-      offset: {x: 0.3, y: -2.51}
-      size: {x: 6.66, y: 0.04}
+      offset: {x: 0, y: 0.04653186}
+      size: {x: 2.1622515, y: 8.103448}
       radius: 0
-      capsuleDirection: 1
-      paths: []
-      edgePoints: []
-    hasRigidbody2D: 1
-    rbGravityScale: 1
-    tip:
-      localPosition: {x: 0, y: 0}
-      localRotationZ: 0
-      collider:
-        kind: 0
-        isTrigger: 0
-        offset: {x: 0, y: 0}
-        size: {x: 0, y: 0}
-        radius: 0
-        capsuleDirection: 0
-        paths: []
-        edgePoints: []
-  - name: target_chicken (2)
-    tag: Obstacle
-    layer: 8
-    position: {x: 32.528927, y: 1.6584063, z: 1}
-    rotationZ: 0
-    scale: {x: 0.63, y: 0.63}
-    sprite: {fileID: 21300000, guid: c8b256648fe0ce043acb77061f153659, type: 3}
-    color: {r: 1, g: 1, b: 1, a: 1}
-    sortingLayerName: Default
-    sortingOrder: 0
-    colliders:
-    - kind: 3
-      isTrigger: 0
-      offset: {x: 0.3, y: -2.51}
-      size: {x: 6.66, y: 0.04}
-      radius: 0
-      capsuleDirection: 1
-      paths: []
-      edgePoints: []
-    hasRigidbody2D: 1
-    rbGravityScale: 1
-    tip:
-      localPosition: {x: 0, y: 0}
-      localRotationZ: 0
-      collider:
-        kind: 0
-        isTrigger: 0
-        offset: {x: 0, y: 0}
-        size: {x: 0, y: 0}
-        radius: 0
-        capsuleDirection: 0
-        paths: []
-        edgePoints: []
-  - name: target_chicken (3)
-    tag: Obstacle
-    layer: 8
-    position: {x: 8.208928, y: 1.6584063, z: 1}
-    rotationZ: 0
-    scale: {x: 0.63, y: 0.63}
-    sprite: {fileID: 21300000, guid: c8b256648fe0ce043acb77061f153659, type: 3}
-    color: {r: 1, g: 1, b: 1, a: 1}
-    sortingLayerName: Default
-    sortingOrder: 0
-    colliders:
-    - kind: 3
-      isTrigger: 0
-      offset: {x: 0.3, y: -2.51}
-      size: {x: 6.66, y: 0.04}
-      radius: 0
-      capsuleDirection: 1
+      capsuleDirection: 0
       paths: []
       edgePoints: []
     hasRigidbody2D: 1
@@ -225,7 +159,7 @@ MonoBehaviour:
   fulcrums:
   - name: Fulcrum
     tag: Fulcrum
-    layer: 0
+    layer: 10
     position: {x: -0.6899996, y: 0.9484062, z: 0}
     rotationZ: 0
     scale: {x: 0.32, y: 0.32}
@@ -240,6 +174,47 @@ MonoBehaviour:
       size: {x: 7.4, y: 3.81}
       radius: 0
       capsuleDirection: 0
+      paths: []
+      edgePoints: []
+    hasRigidbody2D: 0
+    rbGravityScale: 0
+    tip:
+      localPosition: {x: 0, y: 0}
+      localRotationZ: 0
+      collider:
+        kind: 0
+        isTrigger: 0
+        offset: {x: 0, y: 0}
+        size: {x: 0, y: 0}
+        radius: 0
+        capsuleDirection: 0
+        paths: []
+        edgePoints: []
+  - name: obstacle_human
+    tag: Fulcrum
+    layer: 10
+    position: {x: 10.09, y: 1.5484056, z: -1}
+    rotationZ: 0
+    scale: {x: 1.5999999, y: 1.5999999}
+    sprite: {fileID: 21300000, guid: 800b9ab47703f8e4eb9d86ec4390672c, type: 3}
+    color: {r: 1, g: 1, b: 1, a: 1}
+    sortingLayerName: Default
+    sortingOrder: 0
+    colliders:
+    - kind: 3
+      isTrigger: 0
+      offset: {x: -0.05, y: 3}
+      size: {x: 1.21, y: 2.21}
+      radius: 0
+      capsuleDirection: 0
+      paths: []
+      edgePoints: []
+    - kind: 3
+      isTrigger: 0
+      offset: {x: 0, y: 0.54}
+      size: {x: 4.32, y: 3.02}
+      radius: 0
+      capsuleDirection: 1
       paths: []
       edgePoints: []
     hasRigidbody2D: 0

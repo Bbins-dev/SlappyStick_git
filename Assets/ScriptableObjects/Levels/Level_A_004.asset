@@ -13,7 +13,7 @@ MonoBehaviour:
   m_Name: Level_A_004
   m_EditorClassIdentifier: 
   cameraInitial:
-    position: {x: 26.23, y: 8.61, z: -10}
+    position: {x: 22.7, y: 8.61, z: -10}
     rotationZ: 0
     orthographicSize: 7
     fieldOfView: 0
@@ -59,7 +59,7 @@ MonoBehaviour:
   - name: Target
     tag: Target
     layer: 7
-    position: {x: 26.248928, y: 1.6584063, z: 0}
+    position: {x: 22.83, y: 1.6584063, z: 0}
     rotationZ: 0
     scale: {x: 0.63, y: 0.63}
     sprite: {fileID: 21300000, guid: c8b256648fe0ce043acb77061f153659, type: 3}
@@ -156,105 +156,6 @@ MonoBehaviour:
         capsuleDirection: 0
         paths: []
         edgePoints: []
-  - name: Obstacle (6)
-    tag: Obstacle
-    layer: 8
-    position: {x: 14.878928, y: 1.938406, z: 0}
-    rotationZ: 0
-    scale: {x: 0.47999996, y: 0.47999996}
-    sprite: {fileID: 21300000, guid: f8f4d56e4058ec84cb0a157748794721, type: 3}
-    color: {r: 1, g: 1, b: 1, a: 1}
-    sortingLayerName: Default
-    sortingOrder: 0
-    colliders:
-    - kind: 3
-      isTrigger: 0
-      offset: {x: 0, y: 0.04653186}
-      size: {x: 2.1622515, y: 8.103448}
-      radius: 0
-      capsuleDirection: 0
-      paths: []
-      edgePoints: []
-    hasRigidbody2D: 1
-    rbGravityScale: 1
-    tip:
-      localPosition: {x: 0, y: 0}
-      localRotationZ: 0
-      collider:
-        kind: 0
-        isTrigger: 0
-        offset: {x: 0, y: 0}
-        size: {x: 0, y: 0}
-        radius: 0
-        capsuleDirection: 0
-        paths: []
-        edgePoints: []
-  - name: Obstacle (7)
-    tag: Obstacle
-    layer: 8
-    position: {x: 14.878928, y: 5.828406, z: 0}
-    rotationZ: 0
-    scale: {x: 0.47999996, y: 0.47999996}
-    sprite: {fileID: 21300000, guid: f8f4d56e4058ec84cb0a157748794721, type: 3}
-    color: {r: 1, g: 1, b: 1, a: 1}
-    sortingLayerName: Default
-    sortingOrder: 0
-    colliders:
-    - kind: 3
-      isTrigger: 0
-      offset: {x: 0, y: 0.04653186}
-      size: {x: 2.1622515, y: 8.103448}
-      radius: 0
-      capsuleDirection: 0
-      paths: []
-      edgePoints: []
-    hasRigidbody2D: 1
-    rbGravityScale: 1
-    tip:
-      localPosition: {x: 0, y: 0}
-      localRotationZ: 0
-      collider:
-        kind: 0
-        isTrigger: 0
-        offset: {x: 0, y: 0}
-        size: {x: 0, y: 0}
-        radius: 0
-        capsuleDirection: 0
-        paths: []
-        edgePoints: []
-  - name: Obstacle (8)
-    tag: Obstacle
-    layer: 8
-    position: {x: 14.878928, y: 9.728406, z: 0}
-    rotationZ: 0
-    scale: {x: 0.47999996, y: 0.47999996}
-    sprite: {fileID: 21300000, guid: f8f4d56e4058ec84cb0a157748794721, type: 3}
-    color: {r: 1, g: 1, b: 1, a: 1}
-    sortingLayerName: Default
-    sortingOrder: 0
-    colliders:
-    - kind: 3
-      isTrigger: 0
-      offset: {x: 0, y: 0.04653186}
-      size: {x: 2.1622515, y: 8.103448}
-      radius: 0
-      capsuleDirection: 0
-      paths: []
-      edgePoints: []
-    hasRigidbody2D: 1
-    rbGravityScale: 1
-    tip:
-      localPosition: {x: 0, y: 0}
-      localRotationZ: 0
-      collider:
-        kind: 0
-        isTrigger: 0
-        offset: {x: 0, y: 0}
-        size: {x: 0, y: 0}
-        radius: 0
-        capsuleDirection: 0
-        paths: []
-        edgePoints: []
   - name: Obstacle (3)
     tag: Obstacle
     layer: 8
@@ -292,72 +193,6 @@ MonoBehaviour:
     tag: Obstacle
     layer: 8
     position: {x: 9.518929, y: 13.668406, z: 0}
-    rotationZ: 0
-    scale: {x: 0.47999996, y: 0.47999996}
-    sprite: {fileID: 21300000, guid: f8f4d56e4058ec84cb0a157748794721, type: 3}
-    color: {r: 1, g: 1, b: 1, a: 1}
-    sortingLayerName: Default
-    sortingOrder: 0
-    colliders:
-    - kind: 3
-      isTrigger: 0
-      offset: {x: 0, y: 0.04653186}
-      size: {x: 2.1622515, y: 8.103448}
-      radius: 0
-      capsuleDirection: 0
-      paths: []
-      edgePoints: []
-    hasRigidbody2D: 1
-    rbGravityScale: 1
-    tip:
-      localPosition: {x: 0, y: 0}
-      localRotationZ: 0
-      collider:
-        kind: 0
-        isTrigger: 0
-        offset: {x: 0, y: 0}
-        size: {x: 0, y: 0}
-        radius: 0
-        capsuleDirection: 0
-        paths: []
-        edgePoints: []
-  - name: Obstacle
-    tag: Obstacle
-    layer: 8
-    position: {x: 20.37893, y: 2.0384064, z: 0}
-    rotationZ: 0
-    scale: {x: 0.47999996, y: 0.47999996}
-    sprite: {fileID: 21300000, guid: f8f4d56e4058ec84cb0a157748794721, type: 3}
-    color: {r: 1, g: 1, b: 1, a: 1}
-    sortingLayerName: Default
-    sortingOrder: 0
-    colliders:
-    - kind: 3
-      isTrigger: 0
-      offset: {x: 0, y: 0.04653186}
-      size: {x: 2.1622515, y: 8.103448}
-      radius: 0
-      capsuleDirection: 0
-      paths: []
-      edgePoints: []
-    hasRigidbody2D: 1
-    rbGravityScale: 1
-    tip:
-      localPosition: {x: 0, y: 0}
-      localRotationZ: 0
-      collider:
-        kind: 0
-        isTrigger: 0
-        offset: {x: 0, y: 0}
-        size: {x: 0, y: 0}
-        radius: 0
-        capsuleDirection: 0
-        paths: []
-        edgePoints: []
-  - name: Obstacle (4)
-    tag: Obstacle
-    layer: 8
-    position: {x: 20.37893, y: 5.958406, z: 0}
     rotationZ: 0
     scale: {x: 0.47999996, y: 0.47999996}
     sprite: {fileID: 21300000, guid: f8f4d56e4058ec84cb0a157748794721, type: 3}

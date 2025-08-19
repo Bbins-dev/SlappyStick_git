@@ -13,7 +13,7 @@ MonoBehaviour:
   m_Name: Level_A_001
   m_EditorClassIdentifier: 
   cameraInitial:
-    position: {x: 24.1, y: 9.24, z: -10}
+    position: {x: 15.51, y: 9.24, z: -10}
     rotationZ: 0
     orthographicSize: 7
     fieldOfView: 0
@@ -59,7 +59,7 @@ MonoBehaviour:
   - name: Target
     tag: Target
     layer: 7
-    position: {x: 23.73893, y: 1.6584063, z: 0}
+    position: {x: 14.9, y: 1.6584063, z: 0}
     rotationZ: 0
     scale: {x: 0.63, y: 0.63}
     sprite: {fileID: 21300000, guid: c8b256648fe0ce043acb77061f153659, type: 3}
