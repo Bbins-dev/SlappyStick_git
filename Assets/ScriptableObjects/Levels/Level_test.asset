@@ -32,7 +32,7 @@ MonoBehaviour:
     - kind: 1
       isTrigger: 0
       offset: {x: -0.12566805, y: 0.0024074167}
-      size: {x: 8.088664, y: 0.94632816}
+      size: {x: 2.44, y: 0.19}
       radius: 0
       capsuleDirection: 0
       paths: []
@@ -45,15 +45,15 @@ MonoBehaviour:
       collider:
         kind: 4
         isTrigger: 1
-        offset: {x: 0, y: 0}
+        offset: {x: 0, y: -2.92}
         size: {x: 0, y: 0}
         radius: 0
         capsuleDirection: 0
         paths:
         - points:
-          - {x: 0.056555644, y: 0.6337855}
-          - {x: -0.3505149, y: -1.0580983}
-          - {x: 0.012681484, y: -1.0597619}
+          - {x: 0.019563567, y: 0.66297674}
+          - {x: -0.026209325, y: 0.29317522}
+          - {x: 0.03295024, y: 0.27124238}
         edgePoints: []
   targets:
   - name: target_chicken
