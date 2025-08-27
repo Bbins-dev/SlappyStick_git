@@ -47,8 +47,24 @@ public class LevelManager : MonoBehaviour
         }
 
         // Build
-        // 1) Stick 먼저 생성
-        var stickGo = BuildEntity(data.stick, isStick: true);
+        // 1) Stick 먼저 생성 (prefab 기반 우선)
+        GameObject stickGo = null;
+        if (!string.IsNullOrEmpty(data.stickSpawn.prefabName))
+        {
+            var prefab = Resources.Load<GameObject>($"Sticks/{data.stickSpawn.prefabName}");
+            if (prefab == null)
+            {
+                Debug.LogError($"[LevelManager] Stick prefab not found: {data.stickSpawn.prefabName}");
+            }
+            else
+            {
+                stickGo = Instantiate(prefab, data.stickSpawn.position, Quaternion.Euler(0, 0, data.stickSpawn.rotationZ), dynamicRoot);
+                stickGo.transform.localScale = new Vector3(data.stickSpawn.scale.x, data.stickSpawn.scale.y, 1f);
+            }
+        }
+        // fallback: 기존 방식
+        if (stickGo == null)
+            stickGo = BuildEntity(data.stick, isStick: true);
 
         // 2) Targets 생성하면서 "첫 번째 타겟 Transform" 기억
         Transform firstTarget = null;

@@ -86,8 +86,19 @@ public class LevelData : ScriptableObject
         public TipData tip;          // optional child tip collider
     }
 
+    [System.Serializable]
+    public struct StickSpawnData
+    {
+        public string prefabName; // ex: "Stick", "StickHeavy" 등
+        public Vector3 position;
+        public float rotationZ;
+        public Vector2 scale;
+    }
+
     [Header("Stick (single)")]
-    public EntityData stick;
+    public EntityData stick; // 기존 방식(점진적 마이그레이션)
+    [Header("Stick (Prefab-based)")]
+    public StickSpawnData stickSpawn;
 
     [Header("Targets")]
     public EntityData[] targets;

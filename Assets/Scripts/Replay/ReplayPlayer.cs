@@ -16,6 +16,8 @@ public class ReplayPlayer : MonoBehaviour
 
     private ReplayData data;             // trackCount, step, paths[], pos[], rotZ[]
     private bool isPlaying;
+    private bool isInterpolating;
+    private float replayStartTime;
 
     // 카메라 핸들/복구 정보
     private StickItCamera camFollow;
@@ -174,77 +176,9 @@ public class ReplayPlayer : MonoBehaviour
     private IEnumerator CoPlay()
     {
         isPlaying = true;
-
-        // 물리 비활성
-        disabledBodies.Clear();
-        foreach (var t in boundTargets)
-        {
-            if (!t) continue;
-            var rb = t.GetComponent<Rigidbody2D>();
-            if (rb && rb.simulated)
-            {
-                rb.simulated = false;
-                disabledBodies.Add(rb);
-            }
-        }
-
-        // HUD 숨김
-        GameObject hudToRestore = null;
-        if (hideHUD && UIRoot.Instance && UIRoot.Instance.hudRoot)
-        {
-            hudToRestore = UIRoot.Instance.hudRoot;
-            hudToRestore.SetActive(false);
-        }
-
-        // 재생
-        float step = Mathf.Max(0.0001f, data.step);
-        int tracks = data.trackCount;
-        int frameCount = data.pos.Length / tracks;
-
-        for (int f = 0; f < frameCount; f++)
-        {
-            int baseIdx = f * tracks;
-            for (int t = 0; t < tracks; t++)
-            {
-                var tr = boundTargets[t];
-                if (!tr) continue;
-
-                int idx = baseIdx + t;
-                tr.SetPositionAndRotation(
-                    data.pos[idx],
-                    Quaternion.Euler(0, 0, data.rotZ[idx])
-                );
-            }
-            yield return new WaitForSecondsRealtime(step);
-        }
-
-        // 복구: 물리
-        for (int i = 0; i < disabledBodies.Count; i++)
-        {
-            var rb = disabledBodies[i];
-            if (rb) rb.simulated = true;
-        }
-        disabledBodies.Clear();
-
-        // 복구: HUD
-        if (hudToRestore) hudToRestore.SetActive(true);
-
-        // 복구: 카메라 팔로우 (원래 Stick/Target로)
-        if (camFollow != null)
-        {
-            var stick = restoreFollow ?? FindCurrentStick();
-            var init = restoreInitial ?? FindFirstTarget() ?? stick;
-            if (stick != null)
-                camFollow.ConfigureTargets(init, stick, resetTimers: true);
-        }
-
-        Camera.main?.GetComponent<StickItCamera>()?.SetReplayOverride(false);
-
-        isPlaying = false;
-
-        // 콜백 알림 (팝업 다시 열기 등)
-        finishedCallback?.Invoke();
-        finishedCallback = null;
+        isInterpolating = true;
+        replayStartTime = Time.realtimeSinceStartup;
+        yield break;
     }
     
     private Transform FindStickTarget()
@@ -256,5 +190,52 @@ public class ReplayPlayer : MonoBehaviour
 
         // 못 찾으면 첫 트랙으로 폴백
         return boundTargets.Count > 0 ? boundTargets[0] : null;
+    }
+
+    private void EndReplay()
+    {
+        isPlaying = false;
+        isInterpolating = false;
+        finishedCallback?.Invoke();
+        finishedCallback = null;
+    }
+
+    void Update()
+    {
+        if (!isInterpolating || data == null) return;
+        float elapsed = Time.realtimeSinceStartup - replayStartTime;
+        float step = Mathf.Max(0.0001f, data.step);
+        int tracks = data.trackCount;
+        int frameCount = data.pos.Length / tracks;
+        float t = elapsed / step;
+        int f0 = Mathf.FloorToInt(t);
+        int f1 = Mathf.Min(f0 + 1, frameCount - 1);
+        float lerp = Mathf.Clamp01(t - f0);
+
+        if (f0 >= frameCount - 1) {
+            // 마지막 프레임 고정
+            for (int trk = 0; trk < tracks; trk++) {
+                var tr = boundTargets[trk];
+                if (!tr) continue;
+                int idx = (frameCount - 1) * tracks + trk;
+                tr.SetPositionAndRotation(data.pos[idx], Quaternion.Euler(0, 0, data.rotZ[idx]));
+            }
+            EndReplay();
+            return;
+        }
+
+        for (int trk = 0; trk < tracks; trk++) {
+            var tr = boundTargets[trk];
+            if (!tr) continue;
+            int idx0 = f0 * tracks + trk;
+            int idx1 = f1 * tracks + trk;
+            Vector3 pos = Vector3.Lerp(data.pos[idx0], data.pos[idx1], lerp);
+            Quaternion rot = Quaternion.Slerp(
+                Quaternion.Euler(0, 0, data.rotZ[idx0]),
+                Quaternion.Euler(0, 0, data.rotZ[idx1]),
+                lerp
+            );
+            tr.SetPositionAndRotation(pos, rot);
+        }
     }
 }

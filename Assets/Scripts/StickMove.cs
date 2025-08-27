@@ -8,29 +8,29 @@ public class StickMove : MonoBehaviour
 {
     [Header("Positioning Settings")]
     [Tooltip("Max horizontal drag range from start position")]
-    public float positionRange = 0.5f;
+    [SerializeField] private float positionRange = 0.5f;
 
     [Header("Hold Settings")]
     [Tooltip("Maximum mouse hold time (seconds)")]
-    public float maxHoldTime = 1f;
+    [SerializeField] private float maxHoldTime = 1f;
 
     [Header("Launch Settings")]
     [Tooltip("Maximum launch force at 100% hold")]
-    public float maxLaunchForce = 3f;
+    [SerializeField] private float maxLaunchForce = 3f;
     [Tooltip("Delay before launch after mouse release (seconds)")]
-    public float launchDelay = 0.125f;
+    [SerializeField] private float launchDelay = 0.125f;
 
     [Header("Launch Direction")]
     [Tooltip("X component of the launch direction")]
-    public float launchX = 1.5f;
+    [SerializeField] private float launchX = 1.5f;
     [Tooltip("Y component of the launch direction")]
-    public float launchY = 1f;
+    [SerializeField] private float launchY = 1f;
 
     [Header("Rotation Settings")]
     [Tooltip("Maximum torque at 100% hold")]
-    public float maxTorque = 25f;
+    [SerializeField] private float maxTorque = 25f;
     [Tooltip("Multiplier to adjust rotation speed")]
-    public float torqueMultiplier = 1f;
+    [SerializeField] private float torqueMultiplier = 1f;
 
     [Header("UI Settings")]
     [Tooltip("TMP Text for displaying hold time & messages")]
@@ -39,36 +39,36 @@ public class StickMove : MonoBehaviour
     [Header("Auto Reset On Surface Idle")]
     [FormerlySerializedAs("idleOnObstacleSeconds")]
     [Tooltip("Seconds to wait while idle on specified tags before resetting")]
-    public float idleOnSurfaceSeconds = 1f;
+    [SerializeField] private float idleOnSurfaceSeconds = 1f;
 
     [Tooltip("Linear speed under which the stick is considered idle (m/s)")]
-    public float idleSpeedThreshold = 0.1f;
+    [SerializeField] private float idleSpeedThreshold = 0.1f;
 
     [Tooltip("Angular speed under which the stick is considered idle (deg/s)")]
-    public float idleAngularSpeedThreshold = 7f;
+    [SerializeField] private float idleAngularSpeedThreshold = 7f;
 
     [Tooltip("Tags that trigger idle-reset when touching (e.g., Obstacle, Floor, Target)")]
-    public string[] idleResetTags = new[] { "Obstacle", "Floor", "Target" };
+    [SerializeField] private string[] idleResetTags = new[] { "Obstacle", "Floor", "Target" };
 
     // ───────────────────────── NEW: fast-stuck heuristics ─────────────────────────
     [Header("Fast Reset (Stuck/Oscillation)")]
     [Tooltip("Hard cap: reset if a shot lasts longer than this (seconds)")]
-    public float maxShotSeconds = 7f;
+    [SerializeField] private float maxShotSeconds = 7f;
 
     [Tooltip("Look-back window to measure progress (seconds)")]
-    public float progressWindowSeconds = 0.8f;
+    [SerializeField] private float progressWindowSeconds = 0.8f;
 
     [Tooltip("If moved less than this distance within the window while in contact, consider stuck")]
-    public float minProgressDistance = 0.15f;
+    [SerializeField] private float minProgressDistance = 0.15f;
 
     [Tooltip("How long the 'no progress' condition must persist before reset (seconds)")]
-    public float contactStuckSeconds = 0.5f;
+    [SerializeField] private float contactStuckSeconds = 0.5f;
 
     [Tooltip("Time window to count angular velocity sign flips (seconds)")]
-    public float angularFlipWindowSeconds = 1.2f;
+    [SerializeField] private float angularFlipWindowSeconds = 1.2f;
 
     [Tooltip("If sign flips exceed this within the window (and moving slowly), reset")]
-    public int angularFlipCountToReset = 10;
+    [SerializeField] private int angularFlipCountToReset = 10;
 
     // ──────────────────────────────────────────────────────────────────────────────
 
@@ -103,6 +103,7 @@ public class StickMove : MonoBehaviour
     private RigidbodyType2D _startBodyType;
     private float _startGravity;
     private RigidbodyConstraints2D _startConstraints;
+    private Coroutine launchCoroutine;
     private void OnDisable() { ReplayManager.Instance?.EndRecording(false); }
     private void OnDestroy()  { ReplayManager.Instance?.EndRecording(false); }
 
@@ -258,7 +259,9 @@ rb.constraints = restored;
             isHolding = false;
 
             float p = holdTime / maxHoldTime;
-            StartCoroutine(LaunchAfterDelay(p));
+            if (launchCoroutine != null)
+                StopCoroutine(launchCoroutine);
+            launchCoroutine = StartCoroutine(LaunchAfterDelay(p));
             hasLaunched = true;
 
             // NEW: start shot window fresh
@@ -480,6 +483,12 @@ rb.constraints = restored;
         angularFlipTimer = 0f;
         lastAngularVel = 0f;
         SeedProgressBuffer();
+
+        if (launchCoroutine != null)
+        {
+            StopCoroutine(launchCoroutine);
+            launchCoroutine = null;
+        }
     }
 
     // ---------------------- UI bind helpers ----------------------

@@ -55,6 +55,11 @@ MonoBehaviour:
           - {x: 1.0756929, y: 2.96371}
           - {x: 1.0792428, y: 2.9089766}
         edgePoints: []
+  stickSpawn:
+    prefabName: Stick
+    position: {x: 0.10999966, y: 2, z: 0}
+    rotationZ: 0
+    scale: {x: 1, y: 1}
   targets:
   - name: Target
     tag: Target

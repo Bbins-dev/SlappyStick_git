@@ -103,7 +103,9 @@ public class StickItCamera : MonoBehaviour
 
     void LateUpdate()
     {
-        if (replayOverrideActive) return;
+        // 기존: if (replayOverrideActive) return;
+        // 수정: 리플레이 중에도 target이 있으면 따라가도록
+        if (replayOverrideActive && target == null) return;
 
         // 타겟 자동 바인딩(안전망)
         if (target == null && !triedAutoBind)
