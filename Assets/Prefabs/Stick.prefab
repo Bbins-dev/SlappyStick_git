@@ -109,7 +109,7 @@ SpriteRenderer:
   m_FlipX: 0
   m_FlipY: 0
   m_DrawMode: 0
-  m_Size: {x: 10.24, y: 10.24}
+  m_Size: {x: 2.71, y: 0.35}
   m_AdaptiveModeThreshold: 0.5
   m_SpriteTileMode: 0
   m_WasSpriteAssigned: 1
@@ -147,18 +147,18 @@ BoxCollider2D:
   m_IsTrigger: 0
   m_UsedByEffector: 0
   m_UsedByComposite: 0
-  m_Offset: {x: -0.12566805, y: 0.0024074167}
+  m_Offset: {x: -0.098062515, y: 0.0024074167}
   m_SpriteTilingProperty:
     border: {x: 0, y: 0, z: 0, w: 0}
     pivot: {x: 0.5, y: 0.5}
     oldSize: {x: 2.71, y: 0.35}
-    newSize: {x: 10.24, y: 10.24}
+    newSize: {x: 2.71, y: 0.35}
     adaptiveTilingThreshold: 0.5
     drawMode: 0
     adaptiveTiling: 0
   m_AutoTiling: 0
   serializedVersion: 2
-  m_Size: {x: 2.44, y: 0.19}
+  m_Size: {x: 2.4952111, y: 0.19}
   m_EdgeRadius: 0
 --- !u!1 &5634899372718604596
 GameObject:
@@ -186,8 +186,8 @@ Transform:
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 5634899372718604596}
   serializedVersion: 2
-  m_LocalRotation: {x: 0, y: 0, z: 0.7071068, w: -0.7071068}
-  m_LocalPosition: {x: 3.527, y: 0.03, z: 0}
+  m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
+  m_LocalPosition: {x: 0, y: 0, z: 0}
   m_LocalScale: {x: 1, y: 1, z: 1}
   m_ConstrainProportionsScale: 0
   m_Children: []
@@ -237,9 +237,9 @@ PolygonCollider2D:
   m_AutoTiling: 0
   m_Points:
     m_Paths:
-    - - {x: 0.019563567, y: 0.66297674}
-      - {x: -0.026209325, y: 0.29317522}
-      - {x: 0.03295024, y: 0.27124238}
+    - - {x: 1.2144115, y: 2.9342518}
+      - {x: 1.0756929, y: 2.96371}
+      - {x: 1.0792428, y: 2.9089766}
   m_UseDelaunayMesh: 0
 --- !u!114 &6419875300740758582
 MonoBehaviour:

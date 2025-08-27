@@ -75,6 +75,8 @@ public class StickItCamera : MonoBehaviour
     private float _followStartY;              // 포지셔닝 종료 시점의 스틱 Y
     public bool IsPositionCamReady => hasReachedPositionCam;
 
+    private bool triedAutoBind = false;
+
     // ─────────────────────────────── Unity lifecycle ────────────────────────────────
     void Awake()
     {
@@ -104,10 +106,14 @@ public class StickItCamera : MonoBehaviour
         if (replayOverrideActive) return;
 
         // 타겟 자동 바인딩(안전망)
-        if (target == null)
+        if (target == null && !triedAutoBind)
         {
             var sm = FindObjectOfType<StickMove>();
-            if (sm) SetFollowTarget(sm.transform, resetTimers: false);
+            if (sm)
+            {
+                SetFollowTarget(sm.transform, resetTimers: false);
+                triedAutoBind = true;
+            }
         }
 
         // ── 1) 초기 타겟 연출 ─────────────────────────────────────────────
@@ -260,6 +266,7 @@ public class StickItCamera : MonoBehaviour
     {
         target = t;
         stickMove = t ? t.GetComponent<StickMove>() : null;
+        triedAutoBind = false;
 
         if (resetTimers)
         {

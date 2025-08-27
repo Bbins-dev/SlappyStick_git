@@ -31,8 +31,8 @@ MonoBehaviour:
     colliders:
     - kind: 1
       isTrigger: 0
-      offset: {x: -0.12566805, y: 0.0024074167}
-      size: {x: 2.44, y: 0.19}
+      offset: {x: -0.098062515, y: 0.0024074167}
+      size: {x: 2.4952111, y: 0.19}
       radius: 0
       capsuleDirection: 0
       paths: []
@@ -40,8 +40,8 @@ MonoBehaviour:
     hasRigidbody2D: 0
     rbGravityScale: 0
     tip:
-      localPosition: {x: 3.527, y: 0.03}
-      localRotationZ: 270
+      localPosition: {x: 0, y: 0}
+      localRotationZ: 0
       collider:
         kind: 4
         isTrigger: 1
@@ -51,9 +51,9 @@ MonoBehaviour:
         capsuleDirection: 0
         paths:
         - points:
-          - {x: 0.019563567, y: 0.66297674}
-          - {x: -0.026209325, y: 0.29317522}
-          - {x: 0.03295024, y: 0.27124238}
+          - {x: 1.2144115, y: 2.9342518}
+          - {x: 1.0756929, y: 2.96371}
+          - {x: 1.0792428, y: 2.9089766}
         edgePoints: []
   targets:
   - name: Target

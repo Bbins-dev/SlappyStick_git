@@ -153,6 +153,10 @@ public class StickMove : MonoBehaviour
     {
         if (holdTimeTMP == null) TryBindUI();
 
+        // cameraFollow가 null이면 다시 캐싱 시도
+        if (cameraFollow == null && Camera.main != null)
+            cameraFollow = Camera.main.GetComponent<StickItCamera>();
+
         if (isPositioning)
         {
             if (cameraFollow == null || !cameraFollow.IsPositionCamReady)
