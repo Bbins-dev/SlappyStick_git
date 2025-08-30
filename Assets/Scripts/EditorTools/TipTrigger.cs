@@ -99,31 +99,16 @@ public class TipTrigger : MonoBehaviour
 
         triggered = true;
 
-        // KISS 원칙: 항상 wobble 후 이벤트 발생하도록 단순화
-        StartCoroutine(DoStuckSequenceWithDelayedEvents(other));
-    }
-
-    /// <summary>
-    /// wobble 이펙트 후 이벤트를 발생시키는 코루틴 (단순화)
-    /// </summary>
-    private IEnumerator DoStuckSequenceWithDelayedEvents(Collider2D other)
-    {
-        // 1) 리플레이 저장 (일반 모드에서만)
-        var replayPlayer = FindObjectOfType<ReplayPlayer>(true);
-        bool isReplay = replayPlayer != null && replayPlayer.IsPlaying;
-        
-        if (!isReplay)
-        {
-            SaveReplayOnSuccess();
-        }
-
-        // 2) wobble 이펙트 실행
-        yield return StartCoroutine(DoStuckSequence(other));
-
-        // 3) wobble 완료 후 이벤트 발생
+        // KISS 원칙: 바로 이벤트 발생 + wobble 이펙트
+        SaveReplayOnSuccess();
         TryNotifyGameManager();
         onStageCleared?.Invoke();
+
+        // wobble 이펙트는 별도로 실행
+        StartCoroutine(DoStuckSequence(other));
     }
+
+
 
     /// <summary>
     /// 목표 달성 시 리플레이를 성공으로 저장 (메이킹 씬에서도 작동)

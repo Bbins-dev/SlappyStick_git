@@ -76,7 +76,20 @@ public class ClearPopupDriver : MonoBehaviour
 
     private IEnumerator ShowAfterDelay()
     {
-        yield return new WaitForSecondsRealtime(popupDelay);
+        // 리플레이 모드에서만 wobble 시간만큼 추가 지연
+        var replayPlayer = FindObjectOfType<ReplayPlayer>(true);
+        bool isReplay = replayPlayer != null && replayPlayer.IsPlaying;
+        
+        if (isReplay)
+        {
+            // 리플레이: wobble 이펙트를 볼 수 있도록 추가 지연 (1.2초 = pushIn 0.2s + wobble 1.0s)
+            yield return new WaitForSecondsRealtime(1.2f);
+        }
+        else
+        {
+            // 실제 플레이: 기존 지연만
+            yield return new WaitForSecondsRealtime(popupDelay);
+        }
 
         // ★★★ 성공(클리어): 끝내고 캐시 유지 (TipTrigger에서 이미 처리되었을 수 있지만 안전하게 중복 호출)
         // ShowAfterDelay는 코루틴이므로 OnDestroy 상황이 아니어서 안전함
