@@ -6,7 +6,31 @@ using UnityEngine;
 [AddComponentMenu("StickIt/Replay Manager")]
 public class ReplayManager : MonoBehaviour
 {
-    public static ReplayManager Instance { get; private set; }
+    public static ReplayManager Instance 
+    { 
+        get 
+        {
+            if (_instance == null)
+            {
+                // 자동 생성: 메이킹 씬 등에서 ReplayManager가 없을 때 대비
+                var go = new GameObject("ReplayManager (Auto-Created)");
+                _instance = go.AddComponent<ReplayManager>();
+                DontDestroyOnLoad(go);
+                Debug.Log("[ReplayManager] 인스턴스 자동 생성됨");
+            }
+            return _instance;
+        }
+        private set { _instance = value; }
+    }
+    private static ReplayManager _instance;
+
+    /// <summary>
+    /// OnDestroy 등에서 안전하게 사용할 수 있는 메서드 (새 인스턴스 생성하지 않음)
+    /// </summary>
+    public static ReplayManager GetExistingInstance()
+    {
+        return _instance;
+    }
     public static string CacheFilePath =>
         Path.Combine(Application.temporaryCachePath, "stickit_last.replay"); // cached single replay
 
@@ -40,8 +64,12 @@ public class ReplayManager : MonoBehaviour
 
     void Awake()
     {
-        if (Instance != null && Instance != this) { Destroy(gameObject); return; }
-        Instance = this;
+        if (_instance != null && _instance != this) 
+        { 
+            Destroy(gameObject); 
+            return; 
+        }
+        _instance = this;
         DontDestroyOnLoad(gameObject);
     }
 

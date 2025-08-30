@@ -39,6 +39,9 @@ public class SettingsUI : MonoBehaviour
         if (mainMenuButton)    mainMenuButton.onClick.AddListener(OnGoMainMenu);
         if (restartButton)     restartButton.onClick.AddListener(OnRestart);
 
+        // Making 씬에서는 특정 버튼들 비활성화
+        ConfigureButtonsForMakingScene();
+
         // Start hidden via controller (CanvasGroup only)
         if (panel) panel.Close();
 
@@ -128,5 +131,39 @@ public class SettingsUI : MonoBehaviour
         }
 #endif
         SceneManager.LoadScene(playSceneName, LoadSceneMode.Single);
+    }
+
+    /// <summary>
+    /// Making 씬에서 특정 버튼들을 비활성화
+    /// </summary>
+    private void ConfigureButtonsForMakingScene()
+    {
+        if (IsMakingScene())
+        {
+            if (levelSelectButton)
+            {
+                levelSelectButton.interactable = false;
+                Debug.Log("[SettingsUI] Making 씬에서 LevelSelect 버튼 비활성화");
+            }
+            if (mainMenuButton)
+            {
+                mainMenuButton.interactable = false;
+                Debug.Log("[SettingsUI] Making 씬에서 MainMenu 버튼 비활성화");
+            }
+        }
+    }
+
+    /// <summary>
+    /// 현재 씬이 Making 씬인지 확인
+    /// </summary>
+    private bool IsMakingScene()
+    {
+        // 1. MakingSceneBootstrap 컴포넌트가 있으면 Making 씬
+        if (FindObjectOfType<MakingSceneBootstrap>() != null)
+            return true;
+
+        // 2. 씬 이름으로 확인
+        var activeScene = SceneManager.GetActiveScene();
+        return activeScene.name.Contains("Making") || activeScene.name.Contains("making");
     }
 }

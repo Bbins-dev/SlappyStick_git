@@ -1,5 +1,6 @@
 using UnityEngine;
 using UnityEngine.Events;
+using System.Collections;
 using System.Collections.Generic;
 
 [AddComponentMenu("StickIt/TipTrigger")]
@@ -79,6 +80,18 @@ public class TipTrigger : MonoBehaviour
             stickRb = stickRoot.GetComponent<Rigidbody2D>();
     }
 
+    private void OnDisable()
+    {
+        // wobble 상태 안전하게 정리
+        ForceWobbleEndCleanup();
+    }
+
+    private void OnDestroy()
+    {
+        // OnDestroy에서는 안전한 cleanup만 수행
+        ForceWobbleEndCleanup();
+    }
+
     private void OnTriggerEnter2D(Collider2D other)
     {
         if (triggered) return;
@@ -86,12 +99,59 @@ public class TipTrigger : MonoBehaviour
 
         triggered = true;
 
-        // 1) Notify/save (safe if no GM)
+        // KISS 원칙: 항상 wobble 후 이벤트 발생하도록 단순화
+        StartCoroutine(DoStuckSequenceWithDelayedEvents(other));
+    }
+
+    /// <summary>
+    /// wobble 이펙트 후 이벤트를 발생시키는 코루틴 (단순화)
+    /// </summary>
+    private IEnumerator DoStuckSequenceWithDelayedEvents(Collider2D other)
+    {
+        // 1) 리플레이 저장 (일반 모드에서만)
+        var replayPlayer = FindObjectOfType<ReplayPlayer>(true);
+        bool isReplay = replayPlayer != null && replayPlayer.IsPlaying;
+        
+        if (!isReplay)
+        {
+            SaveReplayOnSuccess();
+        }
+
+        // 2) wobble 이펙트 실행
+        yield return StartCoroutine(DoStuckSequence(other));
+
+        // 3) wobble 완료 후 이벤트 발생
         TryNotifyGameManager();
         onStageCleared?.Invoke();
+    }
 
-        // 2) Visual sequence
-        StartCoroutine(DoStuckSequence(other));
+    /// <summary>
+    /// 목표 달성 시 리플레이를 성공으로 저장 (메이킹 씬에서도 작동)
+    /// </summary>
+    private void SaveReplayOnSuccess()
+    {
+        var replayManager = ReplayManager.Instance; // 자동 생성 트리거
+        if (replayManager != null)
+        {
+            Debug.Log($"[TipTrigger] 목표 달성! 리플레이 저장 시도 - 레코딩 중: {replayManager != null}");
+            
+            // 성공 시 리플레이 캐시 저장
+            replayManager.EndRecording(keepFile: true);
+            
+            // 저장 후 캐시 상태 확인
+            bool hasCacheAfter = replayManager.HasCache;
+            Debug.Log($"[TipTrigger] 리플레이 저장 완료 - 캐시 존재: {hasCacheAfter}, 경로: {ReplayManager.CacheFilePath}");
+            
+            if (hasCacheAfter && System.IO.File.Exists(ReplayManager.CacheFilePath))
+            {
+                var fileInfo = new System.IO.FileInfo(ReplayManager.CacheFilePath);
+                Debug.Log($"[TipTrigger] 캐시 파일 크기: {fileInfo.Length} bytes");
+            }
+        }
+        else
+        {
+            Debug.LogError("[TipTrigger] ReplayManager.Instance가 null입니다!");
+        }
     }
 
     private void TryNotifyGameManager()

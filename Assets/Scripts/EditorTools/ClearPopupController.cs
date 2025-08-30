@@ -160,9 +160,52 @@ public class ClearPopupController : MonoBehaviour
         if (btnNextLevel) btnNextLevel.interactable = canNext;
         if (nextLevelLabel) nextLevelLabel.text = canNext ? "Next Level" : "Next Level (Locked)";
 
-        // ★ 리플레이 캐시 유무로 PlayReplay 버튼 상태 갱신
+        // ★ 리플레이 캐시 유무로 PlayReplay 버튼 상태 갱신 (메이킹 씬에서는 특별 처리)
         bool hasReplay = ReplayManager.Instance && ReplayManager.Instance.HasCache;
-        if (btnPlayReplay) btnPlayReplay.interactable = hasReplay;
+        bool isMakingScene = IsMakingScene();
+        
+        if (btnPlayReplay) 
+        {
+            if (isMakingScene)
+            {
+                // 메이킹 씬에서는 리플레이 상태와 관계없이 활성화 (테스트 목적)
+                btnPlayReplay.interactable = true;
+                Debug.Log($"[ClearPopup] Making 씬에서 PlayReplay 버튼 강제 활성화 (hasReplay: {hasReplay})");
+            }
+            else
+            {
+                btnPlayReplay.interactable = hasReplay;
+            }
+        }
+
+        // Making 씬에서는 LevelSelect와 NextLevel 버튼 비활성화
+        if (btnLevelSelect)
+        {
+            btnLevelSelect.interactable = !isMakingScene;
+            if (isMakingScene)
+            {
+                Debug.Log("[ClearPopup] Making 씬에서 LevelSelect 버튼 비활성화");
+            }
+        }
+        if (btnNextLevel && isMakingScene)
+        {
+            btnNextLevel.interactable = false;
+            Debug.Log("[ClearPopup] Making 씬에서 NextLevel 버튼 비활성화");
+        }
+    }
+
+    /// <summary>
+    /// 현재 씬이 Making 씬인지 확인
+    /// </summary>
+    private bool IsMakingScene()
+    {
+        // 1. MakingSceneBootstrap 컴포넌트가 있으면 Making 씬
+        if (FindObjectOfType<MakingSceneBootstrap>() != null)
+            return true;
+
+        // 2. 씬 이름으로 확인
+        var activeScene = UnityEngine.SceneManagement.SceneManager.GetActiveScene();
+        return activeScene.name.Contains("Making") || activeScene.name.Contains("making");
     }
 
     // ─────────────────────────────────────────────────────────────────────────
@@ -268,11 +311,22 @@ public class ClearPopupController : MonoBehaviour
 
     public void OnClick_PlayReplay()
     {
-        // ★ 리플레이 캐시가 없으면 경고 후 종료
-        if (!(ReplayManager.Instance && ReplayManager.Instance.HasCache))
+        // ★ 리플레이 캐시가 없으면 경고 후 종료 (메이킹 씬에서는 예외)
+        bool isMakingScene = IsMakingScene();
+        bool hasCache = ReplayManager.Instance && ReplayManager.Instance.HasCache;
+        
+        if (!hasCache)
         {
-            Debug.LogWarning("[Replay] No cached replay to play.");
-            return;
+            if (isMakingScene)
+            {
+                Debug.LogWarning("[Replay] Making 씬에서 캐시가 없음 - 빈 리플레이 재생 시도");
+                // 메이킹 씬에서는 캐시가 없어도 계속 진행 (테스트/디버그 목적)
+            }
+            else
+            {
+                Debug.LogWarning("[Replay] No cached replay to play.");
+                return;
+            }
         }
 
         // 팝업을 잠깐 닫아 시야/입력/타임스케일 정상화

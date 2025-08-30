@@ -21,3 +21,12 @@ alwaysApply: true
 - If a prefab cannot be found at runtime, log an error using Debug.LogError and double-check the prefabName for typos.
 - The legacy EntityData[] fields remain for backward compatibility, but all new levels and features should use the prefab-based spawn system.
 - Always verify that new prefabs are correctly loaded and instantiated in play mode after saving a level.
+
+# Core Development Rules (Priority Order)
+# 1. KISS & DRY Principles (CRITICAL - TOP PRIORITY)
+# 2. Unity Lifecycle Safety (HIGH PRIORITY)  
+# 3. Null Safety & Error Logging (HIGH PRIORITY)
+# 4. Short Methods & Single Responsibility (MEDIUM PRIORITY)
+# 5. Component Caching (MEDIUM PRIORITY)
+# 6. Basic Error Prevention (HIGH PRIORITY)
+# 7. Side Effect Awareness (MEDIUM PRIORITY)

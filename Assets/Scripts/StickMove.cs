@@ -104,8 +104,16 @@ public class StickMove : MonoBehaviour
     private float _startGravity;
     private RigidbodyConstraints2D _startConstraints;
     private Coroutine launchCoroutine;
-    private void OnDisable() { ReplayManager.Instance?.EndRecording(false); }
-    private void OnDestroy()  { ReplayManager.Instance?.EndRecording(false); }
+    private void OnDisable() 
+    { 
+        // OnDisable에서도 안전하게 기존 인스턴스만 접근
+        ReplayManager.GetExistingInstance()?.EndRecording(false); 
+    }
+    private void OnDestroy()  
+    { 
+        // OnDestroy에서는 새 오브젝트 생성을 피하기 위해 기존 인스턴스만 체크
+        ReplayManager.GetExistingInstance()?.EndRecording(false);
+    }
 
     [HideInInspector] public bool IsPositioning => isPositioning;
 
