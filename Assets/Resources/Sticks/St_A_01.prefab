@@ -13,8 +13,10 @@ GameObject:
   - component: {fileID: 1770981471514411842}
   - component: {fileID: 2312051847815119710}
   - component: {fileID: 7316463347069776646}
+  - component: {fileID: 8124580775931137357}
+  - component: {fileID: 6558559733572725174}
   m_Layer: 3
-  m_Name: Stick
+  m_Name: St_A_01
   m_TagString: Stick
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
@@ -160,6 +162,67 @@ BoxCollider2D:
   serializedVersion: 2
   m_Size: {x: 2.4952111, y: 0.19}
   m_EdgeRadius: 0
+--- !u!50 &8124580775931137357
+Rigidbody2D:
+  serializedVersion: 4
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 177131241622479875}
+  m_BodyType: 0
+  m_Simulated: 1
+  m_UseFullKinematicContacts: 0
+  m_UseAutoMass: 0
+  m_Mass: 1
+  m_LinearDrag: 0
+  m_AngularDrag: 0.05
+  m_GravityScale: 1
+  m_Material: {fileID: 0}
+  m_IncludeLayers:
+    serializedVersion: 2
+    m_Bits: 0
+  m_ExcludeLayers:
+    serializedVersion: 2
+    m_Bits: 0
+  m_Interpolate: 0
+  m_SleepingMode: 1
+  m_CollisionDetection: 0
+  m_Constraints: 0
+--- !u!114 &6558559733572725174
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 177131241622479875}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: a4c6efd34e8e204429dc8f2e84daf263, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  positionRange: 0.5
+  maxHoldTime: 1
+  maxLaunchForce: 3
+  launchDelay: 0.125
+  launchX: 1.5
+  launchY: 1
+  maxTorque: 25
+  torqueMultiplier: 1
+  holdTimeTMP: {fileID: 0}
+  idleOnSurfaceSeconds: 1
+  idleSpeedThreshold: 0.1
+  idleAngularSpeedThreshold: 7
+  idleResetTags:
+  - Obstacle
+  - Floor
+  - Target
+  maxShotSeconds: 7
+  progressWindowSeconds: 0.8
+  minProgressDistance: 0.15
+  contactStuckSeconds: 0.5
+  angularFlipWindowSeconds: 1.2
+  angularFlipCountToReset: 10
 --- !u!1 &5634899372718604596
 GameObject:
   m_ObjectHideFlags: 0

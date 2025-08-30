@@ -66,9 +66,24 @@ public class LevelManager : MonoBehaviour
         if (stickGo == null)
             stickGo = BuildEntity(data.stick, isStick: true);
 
-        // 2) Targets 생성하면서 "첫 번째 타겟 Transform" 기억
+        // 2) Targets (Prefab 기반 우선)
         Transform firstTarget = null;
-        if (data.targets != null)
+        if (data.targetSpawns != null && data.targetSpawns.Length > 0)
+        {
+            foreach (var t in data.targetSpawns)
+            {
+                var prefab = Resources.Load<GameObject>($"Targets/{t.prefabName}");
+                if (prefab == null)
+                {
+                    Debug.LogError($"[LevelManager] Target prefab not found: {t.prefabName}");
+                    continue;
+                }
+                var go = Instantiate(prefab, t.position, Quaternion.Euler(0, 0, t.rotationZ), dynamicRoot);
+                go.transform.localScale = new Vector3(t.scale.x, t.scale.y, 1f);
+                if (firstTarget == null) firstTarget = go.transform;
+            }
+        }
+        else if (data.targets != null)
         {
             foreach (var t in data.targets)
             {
@@ -77,14 +92,43 @@ public class LevelManager : MonoBehaviour
             }
         }
 
-        // 3) Obstacles / Fulcrums
-        if (data.obstacles != null)
+        // 3) Obstacles (Prefab 기반 우선)
+        if (data.obstacleSpawns != null && data.obstacleSpawns.Length > 0)
+        {
+            foreach (var o in data.obstacleSpawns)
+            {
+                var prefab = Resources.Load<GameObject>($"Obstacles/{o.prefabName}");
+                if (prefab == null)
+                {
+                    Debug.LogError($"[LevelManager] Obstacle prefab not found: {o.prefabName}");
+                    continue;
+                }
+                var go = Instantiate(prefab, o.position, Quaternion.Euler(0, 0, o.rotationZ), dynamicRoot);
+                go.transform.localScale = new Vector3(o.scale.x, o.scale.y, 1f);
+            }
+        }
+        else if (data.obstacles != null)
         {
             foreach (var o in data.obstacles)
-                BuildEntity(o, isStick: false, isObstacle: true);  // ★ 반드시 true
+                BuildEntity(o, isStick: false, isObstacle: true);
         }
 
-        if (data.fulcrums != null)
+        // 4) Fulcrums (Prefab 기반 우선)
+        if (data.fulcrumSpawns != null && data.fulcrumSpawns.Length > 0)
+        {
+            foreach (var f in data.fulcrumSpawns)
+            {
+                var prefab = Resources.Load<GameObject>($"Fulcrums/{f.prefabName}");
+                if (prefab == null)
+                {
+                    Debug.LogError($"[LevelManager] Fulcrum prefab not found: {f.prefabName}");
+                    continue;
+                }
+                var go = Instantiate(prefab, f.position, Quaternion.Euler(0, 0, f.rotationZ), dynamicRoot);
+                go.transform.localScale = new Vector3(f.scale.x, f.scale.y, 1f);
+            }
+        }
+        else if (data.fulcrums != null)
         {
             foreach (var f in data.fulcrums)
                 BuildEntity(f, isStick: false, isObstacle: false);

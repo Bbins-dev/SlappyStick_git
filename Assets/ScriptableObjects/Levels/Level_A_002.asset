@@ -56,8 +56,8 @@ MonoBehaviour:
           - {x: 1.0792428, y: 2.9089766}
         edgePoints: []
   stickSpawn:
-    prefabName: Stick
-    position: {x: 0.10999966, y: 2, z: 0}
+    prefabName: St_A_01
+    position: {x: 0.21999966, y: 2, z: 10}
     rotationZ: 0
     scale: {x: 1, y: 1}
   targets:
@@ -162,3 +162,18 @@ MonoBehaviour:
         capsuleDirection: 0
         paths: []
         edgePoints: []
+  obstacleSpawns:
+  - prefabName: Ob_A_01
+    position: {x: 12.54, y: 1.9584064, z: 0}
+    rotationZ: 0
+    scale: {x: 0.47999996, y: 0.47999996}
+  targetSpawns:
+  - prefabName: Ta_A_01
+    position: {x: 23.29, y: 1.6584063, z: 0}
+    rotationZ: 0
+    scale: {x: 0.63, y: 0.63}
+  fulcrumSpawns:
+  - prefabName: Fu_A_01
+    position: {x: -0.6899996, y: 0.9484062, z: 0}
+    rotationZ: 0
+    scale: {x: 0.32, y: 0.32}

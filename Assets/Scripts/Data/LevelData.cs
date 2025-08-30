@@ -87,9 +87,9 @@ public class LevelData : ScriptableObject
     }
 
     [System.Serializable]
-    public struct StickSpawnData
+    public struct EntitySpawnData
     {
-        public string prefabName; // ex: "Stick", "StickHeavy" 등
+        public string prefabName; // ex: "Ob_A_01", "Ta_A_01", "Fu_A_01"
         public Vector3 position;
         public float rotationZ;
         public Vector2 scale;
@@ -98,7 +98,7 @@ public class LevelData : ScriptableObject
     [Header("Stick (single)")]
     public EntityData stick; // 기존 방식(점진적 마이그레이션)
     [Header("Stick (Prefab-based)")]
-    public StickSpawnData stickSpawn;
+    public EntitySpawnData stickSpawn;
 
     [Header("Targets")]
     public EntityData[] targets;
@@ -108,4 +108,11 @@ public class LevelData : ScriptableObject
 
     [Header("Fulcrums")]
     public EntityData[] fulcrums;
+
+    [Header("Obstacle (Prefab-based)")]
+    public EntitySpawnData[] obstacleSpawns;
+    [Header("Target (Prefab-based)")]
+    public EntitySpawnData[] targetSpawns;
+    [Header("Fulcrum (Prefab-based)")]
+    public EntitySpawnData[] fulcrumSpawns;
 }

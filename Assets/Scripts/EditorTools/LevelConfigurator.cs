@@ -41,7 +41,7 @@ public class LevelConfigurator : MonoBehaviour
     // ─────────────────────────────────────────────────────────────────────
     // Save
     // ─────────────────────────────────────────────────────────────────────
-    [ContextMenu("Save To LevelData")]
+    // [ContextMenu("Save To LevelData")] // 기존 방식 ContextMenu 제거
     public void SaveToLevelData()
     {
         if (levelData == null)
@@ -80,6 +80,62 @@ public class LevelConfigurator : MonoBehaviour
         EditorUtility.SetDirty(levelData);
         AssetDatabase.SaveAssets();
         Debug.Log($"[LevelConfigurator] Saved → LevelData: {levelData.name} (source: {(currentGroup ? currentGroup.name : "scene roots/markers")})");
+    }
+
+    // ─────────────────────────────────────────────────────────────────────
+    // Save (Prefab Spawns)
+    // ─────────────────────────────────────────────────────────────────────
+    [ContextMenu("Save To LevelData (Prefab Spawns)")]
+    public void SaveToLevelDataPrefabSpawns()
+    {
+        if (levelData == null)
+        {
+            Debug.LogError("[LevelConfigurator] LevelData asset is not assigned.");
+            return;
+        }
+        // 그룹 우선 참조
+        Transform gStick = null, gTargets = null, gObstacles = null, gFulcrums = null;
+        if (currentGroup != null)
+        {
+            gStick     = currentGroup.Find("__Preview_Stick");
+            gTargets   = currentGroup.Find("__Preview_Targets");
+            gObstacles = currentGroup.Find("__Preview_Obstacles");
+            gFulcrums  = currentGroup.Find("__Preview_Fulcrums");
+        }
+        // Stick
+        GameObject stickGo = null;
+        if (gStick != null && gStick.childCount > 0)
+            stickGo = gStick.GetChild(0).gameObject;
+        else
+            stickGo = ResolveStickForSave();
+        if (stickGo != null)
+            levelData.stickSpawn = CaptureEntitySpawnData(stickGo);
+        // Targets
+        var targetList = new List<LevelData.EntitySpawnData>();
+        Transform tRoot = gTargets != null ? gTargets : targetsRoot;
+        if (tRoot != null && tRoot.childCount > 0)
+            for (int i = 0; i < tRoot.childCount; i++)
+                targetList.Add(CaptureEntitySpawnData(tRoot.GetChild(i).gameObject));
+        levelData.targetSpawns = targetList.ToArray();
+        // Obstacles
+        var obsList = new List<LevelData.EntitySpawnData>();
+        Transform oRoot = gObstacles != null ? gObstacles : obstaclesRoot;
+        if (oRoot != null && oRoot.childCount > 0)
+            for (int i = 0; i < oRoot.childCount; i++)
+                obsList.Add(CaptureEntitySpawnData(oRoot.GetChild(i).gameObject));
+        levelData.obstacleSpawns = obsList.ToArray();
+        // Fulcrums
+        var fulcList = new List<LevelData.EntitySpawnData>();
+        Transform fRoot = gFulcrums != null ? gFulcrums : fulcrumsRoot;
+        if (fRoot != null && fRoot.childCount > 0)
+            for (int i = 0; i < fRoot.childCount; i++)
+                fulcList.Add(CaptureEntitySpawnData(fRoot.GetChild(i).gameObject));
+        levelData.fulcrumSpawns = fulcList.ToArray();
+        // 카메라 초기 포즈
+        CaptureCameraInitial();
+        EditorUtility.SetDirty(levelData);
+        AssetDatabase.SaveAssets();
+        Debug.Log($"[LevelConfigurator] Saved prefab spawns → LevelData: {levelData.name}");
     }
 
     // ─────────────────────────────────────────────────────────────────────
@@ -282,6 +338,25 @@ public class LevelConfigurator : MonoBehaviour
         }
 
         return data;
+    }
+
+    // EntitySpawnData로 프리팹 참조 저장 (Stick, Obstacle, Target, Fulcrum 공통)
+    private LevelData.EntitySpawnData CaptureEntitySpawnData(GameObject go)
+    {
+        var tr = go.transform;
+        string prefabName = go.name;
+#if UNITY_EDITOR
+        var prefab = PrefabUtility.GetCorrespondingObjectFromSource(go);
+        if (prefab != null)
+            prefabName = prefab.name;
+#endif
+        return new LevelData.EntitySpawnData
+        {
+            prefabName = prefabName,
+            position = tr.position,
+            rotationZ = tr.eulerAngles.z,
+            scale = new Vector2(tr.localScale.x, tr.localScale.y)
+        };
     }
 
     private LevelData.Collider2DData[] CaptureAllColliders(GameObject go)
