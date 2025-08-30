@@ -3,7 +3,7 @@ description:
 globs:
 alwaysApply: true
 ---
-# 9. Prefab & LevelData Workflow
+ Prefab & LevelData Workflow
 - All prefab references in LevelData must use the prefabName (string) field only. Do not use enums or hardcoded lists for prefab selection.
 - Place all prefabs under the appropriate Resources subfolders:
   - Sticks: Resources/Sticks/
