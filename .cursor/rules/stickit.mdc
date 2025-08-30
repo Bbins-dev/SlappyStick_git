@@ -1,0 +1,23 @@
+---
+description:
+globs:
+alwaysApply: true
+---
+# 9. Prefab & LevelData Workflow
+- All prefab references in LevelData must use the prefabName (string) field only. Do not use enums or hardcoded lists for prefab selection.
+- Place all prefabs under the appropriate Resources subfolders:
+  - Sticks: Resources/Sticks/
+  - Obstacles: Resources/Obstacles/
+  - Targets: Resources/Targets/
+  - Fulcrums: Resources/Fulcrums/
+- Prefab names must follow a consistent naming convention:
+  - Stick: St_*
+  - Obstacle: Ob_*
+  - Target: Ta_*
+  - Fulcrum: Fu_*
+- When making levels, always use the LevelConfigurator editor tool's "Save To LevelData (Prefab Spawns)" function to save. This ensures the prefabName is automatically set to the original prefab's name.
+- At runtime, always load prefabs using Resources.Load with the prefabName from LevelData. Never hardcode prefab names in scripts.
+- When adding new prefabs, simply add them to the correct Resources folder and use them in the scene. No code changes are required as long as the prefabName matches.
+- If a prefab cannot be found at runtime, log an error using Debug.LogError and double-check the prefabName for typos.
+- The legacy EntityData[] fields remain for backward compatibility, but all new levels and features should use the prefab-based spawn system.
+- Always verify that new prefabs are correctly loaded and instantiated in play mode after saving a level.

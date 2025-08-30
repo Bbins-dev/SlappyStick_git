@@ -803,7 +803,7 @@ PrefabInstance:
     m_Modifications:
     - target: {fileID: 1141685103174242557, guid: cd21d647ed0a6eb47a3e7bc1b99ab21f, type: 3}
       propertyPath: m_Name
-      value: Fulcrum
+      value: Fu_A_01
       objectReference: {fileID: 0}
     - target: {fileID: 2930133467201402867, guid: cd21d647ed0a6eb47a3e7bc1b99ab21f, type: 3}
       propertyPath: m_LocalPosition.x
@@ -900,7 +900,7 @@ PrefabInstance:
       objectReference: {fileID: 0}
     - target: {fileID: 8918409803475676607, guid: 0904855d0d8cc4947b8eb623346e2a53, type: 3}
       propertyPath: m_Name
-      value: Obstacle
+      value: Ob_A_01
       objectReference: {fileID: 0}
     m_RemovedComponents: []
     m_RemovedGameObjects: []
@@ -974,7 +974,7 @@ PrefabInstance:
     m_Modifications:
     - target: {fileID: 2879641002578867008, guid: 4842859ae5cd86c4b9011ed11e0489b6, type: 3}
       propertyPath: m_Name
-      value: Target
+      value: Ta_A_01
       objectReference: {fileID: 0}
     - target: {fileID: 4515984338773929258, guid: 4842859ae5cd86c4b9011ed11e0489b6, type: 3}
       propertyPath: m_LocalPosition.x
