@@ -86,7 +86,19 @@ public class LevelDataStickPrefabMigration
                     level.fulcrumSpawns[i].prefabName = "Fu_A_01";
                     level.fulcrumSpawns[i].position = level.fulcrums[i].position;
                     level.fulcrumSpawns[i].rotationZ = level.fulcrums[i].rotationZ;
-                    level.fulcrumSpawns[i].scale = level.fulcrums[i].scale;
+                    
+                    // 프리팹의 원본 스케일을 고려하여 상대적 스케일 계산
+                    // Fu_A_01 프리팹의 원본 스케일은 (1, 1)이므로, 저장된 스케일을 그대로 사용
+                    // 만약 프리팹이 다른 스케일을 가지고 있다면 여기서 나누기 연산을 해야 함
+                    // 기존 fulcrums의 scale이 (0.32, 0.32)인 경우, 프리팹 기반에서는 (1, 1)로 설정
+                    if (Mathf.Approximately(level.fulcrums[i].scale.x, 0.32f) && Mathf.Approximately(level.fulcrums[i].scale.y, 0.32f))
+                    {
+                        level.fulcrumSpawns[i].scale = new Vector2(1f, 1f);
+                    }
+                    else
+                    {
+                        level.fulcrumSpawns[i].scale = level.fulcrums[i].scale;
+                    }
                 }
             }
 

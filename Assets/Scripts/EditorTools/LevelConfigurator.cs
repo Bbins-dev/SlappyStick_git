@@ -1,5 +1,7 @@
 using System.Collections.Generic;
 using UnityEngine;
+using System.Linq;
+
 #if UNITY_EDITOR
 using UnityEditor;
 using UnityEditor.SceneManagement;
@@ -93,49 +95,107 @@ public class LevelConfigurator : MonoBehaviour
             Debug.LogError("[LevelConfigurator] LevelData asset is not assigned.");
             return;
         }
-        // 그룹 우선 참조
-        Transform gStick = null, gTargets = null, gObstacles = null, gFulcrums = null;
-        if (currentGroup != null)
+
+        // 1. PreviewGroup 찾기
+        Transform previewGroup = currentGroup;
+        if (previewGroup == null)
         {
-            gStick     = currentGroup.Find("__Preview_Stick");
-            gTargets   = currentGroup.Find("__Preview_Targets");
-            gObstacles = currentGroup.Find("__Preview_Obstacles");
-            gFulcrums  = currentGroup.Find("__Preview_Fulcrums");
+            // currentGroup이 없으면 씬에서 찾기
+            var allGroups = FindObjectsOfType<Transform>();
+            foreach (var group in allGroups)
+            {
+                if (group.name == $"__PreviewGroup_{levelData.name}")
+                {
+                    previewGroup = group;
+                    break;
+                }
+            }
         }
-        // Stick
-        GameObject stickGo = null;
-        if (gStick != null && gStick.childCount > 0)
-            stickGo = gStick.GetChild(0).gameObject;
-        else
-            stickGo = ResolveStickForSave();
-        if (stickGo != null)
-            levelData.stickSpawn = CaptureEntitySpawnData(stickGo);
-        // Targets
+
+        if (previewGroup == null)
+        {
+            Debug.LogError($"[LevelConfigurator] PreviewGroup({levelData.name})을(를) 찾을 수 없습니다.");
+            return;
+        }
+
+        Debug.Log($"[LevelConfigurator] PreviewGroup 찾음: {previewGroup.name}, 자식 수: {previewGroup.childCount}");
+
+        // 2. PreviewGroup 하위 모든 자식 오브젝트 수집 및 분류
+        var stickList = new List<LevelData.EntitySpawnData>();
+        var obstacleList = new List<LevelData.EntitySpawnData>();
         var targetList = new List<LevelData.EntitySpawnData>();
-        Transform tRoot = gTargets != null ? gTargets : targetsRoot;
-        if (tRoot != null && tRoot.childCount > 0)
-            for (int i = 0; i < tRoot.childCount; i++)
-                targetList.Add(CaptureEntitySpawnData(tRoot.GetChild(i).gameObject));
+        var fulcrumList = new List<LevelData.EntitySpawnData>();
+
+        for (int i = 0; i < previewGroup.childCount; i++)
+        {
+            var child = previewGroup.GetChild(i);
+            var go = child.gameObject;
+            string tag = go.tag;
+            string name = go.name;
+
+            Debug.Log($"[LevelConfigurator] 검사 중: {name} (태그: {tag})");
+
+            // Stick
+            if (tag == "Stick" && name.StartsWith("St_"))
+            {
+                stickList.Add(CaptureEntitySpawnData(go));
+                Debug.Log($"[LevelConfigurator] Stick 추가: {name}");
+            }
+            // Obstacle
+            else if (tag == "Obstacle" && name.StartsWith("Ob_"))
+            {
+                obstacleList.Add(CaptureEntitySpawnData(go));
+                Debug.Log($"[LevelConfigurator] Obstacle 추가: {name}");
+            }
+            // Target
+            else if (tag == "Target" && name.StartsWith("Ta_"))
+            {
+                targetList.Add(CaptureEntitySpawnData(go));
+                Debug.Log($"[LevelConfigurator] Target 추가: {name}");
+            }
+            // Fulcrum
+            else if (tag == "Fulcrum" && name.StartsWith("Fu_"))
+            {
+                fulcrumList.Add(CaptureEntitySpawnData(go));
+                Debug.Log($"[LevelConfigurator] Fulcrum 추가: {name}");
+            }
+            // 임시/기타 오브젝트는 무시
+            else
+            {
+                Debug.Log($"[LevelConfigurator] 무시됨: {name} (태그: {tag}) - 규칙 불일치");
+            }
+        }
+
+        // 3. Stick은 1개만 허용, 여러 개면 경고
+        if (stickList.Count > 1)
+            Debug.LogWarning($"[LevelConfigurator] Stick(프리팹)이 2개 이상입니다. 첫 번째만 저장합니다.");
+        levelData.stickSpawn = stickList.Count > 0 ? stickList[0] : default;
+
+        // 4. 나머지는 모두 리스트로 저장
+        levelData.obstacleSpawns = obstacleList.ToArray();
         levelData.targetSpawns = targetList.ToArray();
-        // Obstacles
-        var obsList = new List<LevelData.EntitySpawnData>();
-        Transform oRoot = gObstacles != null ? gObstacles : obstaclesRoot;
-        if (oRoot != null && oRoot.childCount > 0)
-            for (int i = 0; i < oRoot.childCount; i++)
-                obsList.Add(CaptureEntitySpawnData(oRoot.GetChild(i).gameObject));
-        levelData.obstacleSpawns = obsList.ToArray();
-        // Fulcrums
-        var fulcList = new List<LevelData.EntitySpawnData>();
-        Transform fRoot = gFulcrums != null ? gFulcrums : fulcrumsRoot;
-        if (fRoot != null && fRoot.childCount > 0)
-            for (int i = 0; i < fRoot.childCount; i++)
-                fulcList.Add(CaptureEntitySpawnData(fRoot.GetChild(i).gameObject));
-        levelData.fulcrumSpawns = fulcList.ToArray();
-        // 카메라 초기 포즈
+        levelData.fulcrumSpawns = fulcrumList.ToArray();
+
+        Debug.Log($"[LevelConfigurator] 저장 결과 - Stick: {stickList.Count}, Obstacle: {obstacleList.Count}, Target: {targetList.Count}, Fulcrum: {fulcrumList.Count}");
+
+        // 5. 기존 EntityData 자동 비움
+        levelData.obstacles = new LevelData.EntityData[0];
+        levelData.targets = new LevelData.EntityData[0];
+        levelData.fulcrums = new LevelData.EntityData[0];
+
+        // 6. 카메라 초기 포즈
         CaptureCameraInitial();
         EditorUtility.SetDirty(levelData);
         AssetDatabase.SaveAssets();
         Debug.Log($"[LevelConfigurator] Saved prefab spawns → LevelData: {levelData.name}");
+
+        // 7. 저장 후 prefabSpawns가 비어 있으면 경고 출력
+        if ((levelData.obstacleSpawns == null || levelData.obstacleSpawns.Length == 0) &&
+            (levelData.targetSpawns == null || levelData.targetSpawns.Length == 0) &&
+            (levelData.fulcrumSpawns == null || levelData.fulcrumSpawns.Length == 0))
+        {
+            Debug.LogWarning($"[LevelConfigurator] prefabSpawns가 비어 있습니다. PreviewGroup 하위에 프리팹 인스턴스가 맞는지, 이름/태그 규칙이 맞는지 확인하세요.");
+        }
     }
 
     // ─────────────────────────────────────────────────────────────────────
@@ -159,40 +219,257 @@ public class LevelConfigurator : MonoBehaviour
         if (clearModeOnLoad != ClearMode.None)
             ClearByMode(container, clearModeOnLoad);
 
-        // C) 새 그룹
+        // C) 새 그룹 (폴더 구조 없이 직접)
         string groupName = $"__PreviewGroup_{levelData.name}";
         var groupGO = new GameObject(groupName);
         Undo.RegisterCreatedObjectUndo(groupGO, "Create Preview Group");
         groupGO.transform.SetParent(container, false);
         currentGroup = groupGO.transform;
 
-        // D) 타입별 루트
-        var stickParent     = EnsurePreviewRoot(currentGroup, "__Preview_Stick");
-        var targetsParent   = EnsurePreviewRoot(currentGroup, "__Preview_Targets");
-        var obstaclesParent = EnsurePreviewRoot(currentGroup, "__Preview_Obstacles");
-        var fulcrumsParent  = EnsurePreviewRoot(currentGroup, "__Preview_Fulcrums");
+        Debug.Log($"[LevelConfigurator] PreviewGroup 생성: {groupName}");
 
-        // E) 스폰
-        if (HasValidEntity(levelData.stick))
-            BuildEntityEditor(levelData.stick, SpawnMarker.SpawnType.Stick, stickParent, isStick: true);
+        // D) 프리팹 기반 스폰 (prefabSpawns 우선)
+        Debug.Log($"[LevelConfigurator] LevelData 상태 확인:");
+        Debug.Log($"[LevelConfigurator] - stickSpawn.prefabName: {levelData.stickSpawn.prefabName}");
+        Debug.Log($"[LevelConfigurator] - targetSpawns: {(levelData.targetSpawns != null ? levelData.targetSpawns.Length : 0)}개");
+        Debug.Log($"[LevelConfigurator] - obstacleSpawns: {(levelData.obstacleSpawns != null ? levelData.obstacleSpawns.Length : 0)}개");
+        Debug.Log($"[LevelConfigurator] - fulcrumSpawns: {(levelData.fulcrumSpawns != null ? levelData.fulcrumSpawns.Length : 0)}개");
+        
+        int spawnCount = 0;
 
-        if (levelData.targets != null)
-            foreach (var e in levelData.targets)
-                BuildEntityEditor(e, SpawnMarker.SpawnType.Target, targetsParent, isStick: false);
+        // Stick
+        if (!string.IsNullOrEmpty(levelData.stickSpawn.prefabName))
+        {
+            string stickPath = $"Sticks/{levelData.stickSpawn.prefabName}";
+            Debug.Log($"[LevelConfigurator] Stick 프리팹 로드 시도: {stickPath}");
+            
+            // Resources 폴더 내 모든 프리팹 확인
+            var allSticks = Resources.LoadAll<GameObject>("Sticks");
+            Debug.Log($"[LevelConfigurator] Resources/Sticks 폴더 내 프리팹들: {string.Join(", ", allSticks.Select(p => p.name))}");
+            
+#if UNITY_EDITOR
+            var stickPrefab = Resources.Load<GameObject>(stickPath);
+            if (stickPrefab != null)
+            {
+                var stickGo = (GameObject)PrefabUtility.InstantiatePrefab(stickPrefab, currentGroup);
+                stickGo.transform.position = levelData.stickSpawn.position;
+                stickGo.transform.rotation = Quaternion.Euler(0, 0, levelData.stickSpawn.rotationZ);
+                stickGo.transform.localScale = new Vector3(levelData.stickSpawn.scale.x, levelData.stickSpawn.scale.y, 1f);
+                stickGo.name = levelData.stickSpawn.prefabName;
+                Undo.RegisterCreatedObjectUndo(stickGo, "Load Stick");
+                Debug.Log($"[LevelConfigurator] Stick 프리팹 인스턴스(파란색)로 로드: {levelData.stickSpawn.prefabName}, 스케일: {levelData.stickSpawn.scale}");
+                spawnCount++;
+            }
+            else
+            {
+                Debug.LogError($"[LevelConfigurator] Stick 프리팹을 찾을 수 없습니다: {stickPath}");
+                Debug.LogError($"[LevelConfigurator] 요청된 프리팹 이름: {levelData.stickSpawn.prefabName}");
+            }
+#else
+            // 기존 Instantiate 방식 (런타임)
+            var stickPrefab = Resources.Load<GameObject>(stickPath);
+            if (stickPrefab != null)
+            {
+                var stickGo = Instantiate(stickPrefab, levelData.stickSpawn.position, Quaternion.Euler(0, 0, levelData.stickSpawn.rotationZ), currentGroup);
+                stickGo.transform.localScale = new Vector3(levelData.stickSpawn.scale.x, levelData.stickSpawn.scale.y, 1f);
+                stickGo.name = levelData.stickSpawn.prefabName;
+                Undo.RegisterCreatedObjectUndo(stickGo, "Load Stick");
+                Debug.Log($"[LevelConfigurator] Stick 로드 성공: {levelData.stickSpawn.prefabName}, 스케일: {levelData.stickSpawn.scale}");
+                spawnCount++;
+            }
+            else
+            {
+                Debug.LogError($"[LevelConfigurator] Stick 프리팹을 찾을 수 없습니다: {stickPath}");
+                Debug.LogError($"[LevelConfigurator] 요청된 프리팹 이름: {levelData.stickSpawn.prefabName}");
+            }
+#endif
+        }
 
-        if (levelData.obstacles != null)
-            foreach (var e in levelData.obstacles)
-                BuildEntityEditor(e, SpawnMarker.SpawnType.Obstacle, obstaclesParent, isStick: false);
+        // Targets
+        if (levelData.targetSpawns != null)
+        {
+            foreach (var targetSpawn in levelData.targetSpawns)
+            {
+                string targetPath = $"Targets/{targetSpawn.prefabName}";
+                Debug.Log($"[LevelConfigurator] Target 프리팹 로드 시도: {targetPath}");
+                
+                // Resources 폴더 내 모든 프리팹 확인
+                var allTargets = Resources.LoadAll<GameObject>("Targets");
+                Debug.Log($"[LevelConfigurator] Resources/Targets 폴더 내 프리팹들: {string.Join(", ", allTargets.Select(p => p.name))}");
+                
+#if UNITY_EDITOR
+                var targetPrefab = Resources.Load<GameObject>(targetPath);
+                if (targetPrefab != null)
+                {
+                    var targetGo = (GameObject)PrefabUtility.InstantiatePrefab(targetPrefab, currentGroup);
+                    targetGo.transform.position = targetSpawn.position;
+                    targetGo.transform.rotation = Quaternion.Euler(0, 0, targetSpawn.rotationZ);
+                    targetGo.transform.localScale = new Vector3(targetSpawn.scale.x, targetSpawn.scale.y, 1f);
+                    targetGo.name = targetSpawn.prefabName;
+                    Undo.RegisterCreatedObjectUndo(targetGo, "Load Target");
+                    Debug.Log($"[LevelConfigurator] Target 프리팹 인스턴스(파란색)로 로드: {targetSpawn.prefabName}, 스케일: {targetSpawn.scale}");
+                    spawnCount++;
+                }
+                else
+                {
+                    Debug.LogError($"[LevelConfigurator] Target 프리팹을 찾을 수 없습니다: {targetPath}");
+                    Debug.LogError($"[LevelConfigurator] 요청된 프리팹 이름: {targetSpawn.prefabName}");
+                }
+#else
+                var targetPrefab = Resources.Load<GameObject>(targetPath);
+                if (targetPrefab != null)
+                {
+                    var targetGo = Instantiate(targetPrefab, targetSpawn.position, 
+                        Quaternion.Euler(0, 0, targetSpawn.rotationZ), currentGroup);
+                    targetGo.transform.localScale = new Vector3(targetSpawn.scale.x, targetSpawn.scale.y, 1f);
+                    targetGo.name = targetSpawn.prefabName;
+                    Undo.RegisterCreatedObjectUndo(targetGo, "Load Target");
+                    Debug.Log($"[LevelConfigurator] Target 로드 성공: {targetSpawn.prefabName}, 스케일: {targetSpawn.scale}");
+                    spawnCount++;
+                }
+                else
+                {
+                    Debug.LogError($"[LevelConfigurator] Target 프리팹을 찾을 수 없습니다: {targetPath}");
+                    Debug.LogError($"[LevelConfigurator] 요청된 프리팹 이름: {targetSpawn.prefabName}");
+                }
+#endif
+            }
+        }
 
-        if (levelData.fulcrums != null)
-            foreach (var e in levelData.fulcrums)
-                BuildEntityEditor(e, SpawnMarker.SpawnType.Fulcrum, fulcrumsParent, isStick: false);
+        // Obstacles
+        if (levelData.obstacleSpawns != null)
+        {
+            foreach (var obstacleSpawn in levelData.obstacleSpawns)
+            {
+                string obstaclePath = $"Obstacles/{obstacleSpawn.prefabName}";
+                Debug.Log($"[LevelConfigurator] Obstacle 프리팹 로드 시도: {obstaclePath}");
+                
+                // Resources 폴더 내 모든 프리팹 확인
+                var allObstacles = Resources.LoadAll<GameObject>("Obstacles");
+                Debug.Log($"[LevelConfigurator] Resources/Obstacles 폴더 내 프리팹들: {string.Join(", ", allObstacles.Select(p => p.name))}");
+                
+#if UNITY_EDITOR
+                var obstaclePrefab = Resources.Load<GameObject>(obstaclePath);
+                if (obstaclePrefab != null)
+                {
+                    var obstacleGo = (GameObject)PrefabUtility.InstantiatePrefab(obstaclePrefab, currentGroup);
+                    obstacleGo.transform.position = obstacleSpawn.position;
+                    obstacleGo.transform.rotation = Quaternion.Euler(0, 0, obstacleSpawn.rotationZ);
+                    obstacleGo.transform.localScale = new Vector3(obstacleSpawn.scale.x, obstacleSpawn.scale.y, 1f);
+                    obstacleGo.name = obstacleSpawn.prefabName;
+                    Undo.RegisterCreatedObjectUndo(obstacleGo, "Load Obstacle");
+                    Debug.Log($"[LevelConfigurator] Obstacle 프리팹 인스턴스(파란색)로 로드: {obstacleSpawn.prefabName}, 스케일: {obstacleSpawn.scale}");
+                    spawnCount++;
+                }
+                else
+                {
+                    Debug.LogError($"[LevelConfigurator] Obstacle 프리팹을 찾을 수 없습니다: {obstaclePath}");
+                    Debug.LogError($"[LevelConfigurator] 요청된 프리팹 이름: {obstacleSpawn.prefabName}");
+                }
+#else
+                var obstaclePrefab = Resources.Load<GameObject>(obstaclePath);
+                if (obstaclePrefab != null)
+                {
+                    var obstacleGo = Instantiate(obstaclePrefab, obstacleSpawn.position, 
+                        Quaternion.Euler(0, 0, obstacleSpawn.rotationZ), currentGroup);
+                    obstacleGo.transform.localScale = new Vector3(obstacleSpawn.scale.x, obstacleSpawn.scale.y, 1f);
+                    obstacleGo.name = obstacleSpawn.prefabName;
+                    Undo.RegisterCreatedObjectUndo(obstacleGo, "Load Obstacle");
+                    Debug.Log($"[LevelConfigurator] Obstacle 로드 성공: {obstacleSpawn.prefabName}, 스케일: {obstacleSpawn.scale}");
+                    spawnCount++;
+                }
+                else
+                {
+                    Debug.LogError($"[LevelConfigurator] Obstacle 프리팹을 찾을 수 없습니다: {obstaclePath}");
+                    Debug.LogError($"[LevelConfigurator] 요청된 프리팹 이름: {obstacleSpawn.prefabName}");
+                }
+#endif
+            }
+        }
+
+        // Fulcrums
+        if (levelData.fulcrumSpawns != null)
+        {
+            foreach (var fulcrumSpawn in levelData.fulcrumSpawns)
+            {
+                string fulcrumPath = $"Fulcrums/{fulcrumSpawn.prefabName}";
+                Debug.Log($"[LevelConfigurator] Fulcrum 프리팹 로드 시도: {fulcrumPath}");
+                
+                // Resources 폴더 내 모든 프리팹 확인
+                var allFulcrums = Resources.LoadAll<GameObject>("Fulcrums");
+                Debug.Log($"[LevelConfigurator] Resources/Fulcrums 폴더 내 프리팹들: {string.Join(", ", allFulcrums.Select(p => p.name))}");
+                
+#if UNITY_EDITOR
+                var fulcrumPrefab = Resources.Load<GameObject>(fulcrumPath);
+                if (fulcrumPrefab != null)
+                {
+                    var fulcrumGo = (GameObject)PrefabUtility.InstantiatePrefab(fulcrumPrefab, currentGroup);
+                    fulcrumGo.transform.position = fulcrumSpawn.position;
+                    fulcrumGo.transform.rotation = Quaternion.Euler(0, 0, fulcrumSpawn.rotationZ);
+                    fulcrumGo.transform.localScale = new Vector3(fulcrumSpawn.scale.x, fulcrumSpawn.scale.y, 1f);
+                    fulcrumGo.name = fulcrumSpawn.prefabName;
+                    Undo.RegisterCreatedObjectUndo(fulcrumGo, "Load Fulcrum");
+                    Debug.Log($"[LevelConfigurator] Fulcrum 프리팹 인스턴스(파란색)로 로드: {fulcrumSpawn.prefabName}, 스케일: {fulcrumSpawn.scale}");
+                    spawnCount++;
+                }
+                else
+                {
+                    Debug.LogError($"[LevelConfigurator] Fulcrum 프리팹을 찾을 수 없습니다: {fulcrumPath}");
+                    Debug.LogError($"[LevelConfigurator] 요청된 프리팹 이름: {fulcrumSpawn.prefabName}");
+                }
+#else
+                var fulcrumPrefab = Resources.Load<GameObject>(fulcrumPath);
+                if (fulcrumPrefab != null)
+                {
+                    var fulcrumGo = Instantiate(fulcrumPrefab, fulcrumSpawn.position, 
+                        Quaternion.Euler(0, 0, fulcrumSpawn.rotationZ), currentGroup);
+                    fulcrumGo.transform.localScale = new Vector3(fulcrumSpawn.scale.x, fulcrumSpawn.scale.y, 1f);
+                    fulcrumGo.name = fulcrumSpawn.prefabName;
+                    Undo.RegisterCreatedObjectUndo(fulcrumGo, "Load Fulcrum");
+                    Debug.Log($"[LevelConfigurator] Fulcrum 로드 성공: {fulcrumSpawn.prefabName}, 스케일: {fulcrumSpawn.scale}");
+                    spawnCount++;
+                }
+                else
+                {
+                    Debug.LogError($"[LevelConfigurator] Fulcrum 프리팹을 찾을 수 없습니다: {fulcrumPath}");
+                    Debug.LogError($"[LevelConfigurator] 요청된 프리팹 이름: {fulcrumSpawn.prefabName}");
+                }
+#endif
+            }
+        }
+
+        // E) 기존 EntityData 방식 (fallback)
+        if (spawnCount == 0)
+        {
+            Debug.LogWarning($"[LevelConfigurator] prefabSpawns가 비어 있어서 기존 EntityData 방식으로 로드합니다.");
+            
+            // 타입별 루트 생성 (기존 방식)
+            var stickParent     = EnsurePreviewRoot(currentGroup, "__Preview_Stick");
+            var targetsParent   = EnsurePreviewRoot(currentGroup, "__Preview_Targets");
+            var obstaclesParent = EnsurePreviewRoot(currentGroup, "__Preview_Obstacles");
+            var fulcrumsParent  = EnsurePreviewRoot(currentGroup, "__Preview_Fulcrums");
+
+            if (HasValidEntity(levelData.stick))
+                BuildEntityEditor(levelData.stick, SpawnMarker.SpawnType.Stick, stickParent, isStick: true);
+
+            if (levelData.targets != null)
+                foreach (var e in levelData.targets)
+                    BuildEntityEditor(e, SpawnMarker.SpawnType.Target, targetsParent, isStick: false);
+
+            if (levelData.obstacles != null)
+                foreach (var e in levelData.obstacles)
+                    BuildEntityEditor(e, SpawnMarker.SpawnType.Obstacle, obstaclesParent, isStick: false);
+
+            if (levelData.fulcrums != null)
+                foreach (var e in levelData.fulcrums)
+                    BuildEntityEditor(e, SpawnMarker.SpawnType.Fulcrum, fulcrumsParent, isStick: false);
+        }
 
         // F) 카메라 초기값 적용
         ApplyCameraInitialOnLoad();
 
         EditorSceneManager.MarkSceneDirty(gameObject.scene);
-        Debug.Log($"[LevelConfigurator] Loaded LevelData → {groupName}");
+        Debug.Log($"[LevelConfigurator] Loaded LevelData → {groupName} (총 {spawnCount}개 오브젝트 로드)");
     }
 
     [ContextMenu("Clear Preview (Generated Only)")]
@@ -345,17 +622,42 @@ public class LevelConfigurator : MonoBehaviour
     {
         var tr = go.transform;
         string prefabName = go.name;
+        Vector2 scale = new Vector2(tr.localScale.x, tr.localScale.y);
+        string tag = go.tag;
+
 #if UNITY_EDITOR
-        var prefab = PrefabUtility.GetCorrespondingObjectFromSource(go);
+        var prefab = UnityEditor.PrefabUtility.GetCorrespondingObjectFromSource(go);
         if (prefab != null)
+        {
             prefabName = prefab.name;
+            // 프리팹의 원본 스케일이 (1,1)이므로 현재 스케일을 그대로 저장
+            // 만약 프리팹이 다른 스케일을 가지고 있다면 여기서 나누기 연산을 해야 함
+            scale = new Vector2(tr.localScale.x, tr.localScale.y);
+            Debug.Log($"[LevelConfigurator] 프리팹 인스턴스 발견: {prefabName}, 스케일: {scale}");
+        }
+        else
+        {
+            // 프리팹 인스턴스가 아니더라도 이름 규칙+태그가 맞으면 prefabName 강제 지정
+            if ((tag == "Stick" && prefabName.StartsWith("St_")) ||
+                (tag == "Obstacle" && prefabName.StartsWith("Ob_")) ||
+                (tag == "Fulcrum" && prefabName.StartsWith("Fu_")) ||
+                (tag == "Target" && prefabName.StartsWith("Ta_")))
+            {
+                // prefabName 그대로 사용
+                Debug.Log($"[LevelConfigurator] 이름/태그 규칙에 맞는 오브젝트: {prefabName}, 스케일: {scale}");
+            }
+            else
+            {
+                Debug.LogWarning($"[LevelConfigurator] {go.name}은(는) 프리팹 인스턴스가 아니고, 이름/태그 규칙도 맞지 않습니다. prefabName이 올바르지 않을 수 있습니다.");
+            }
+        }
 #endif
         return new LevelData.EntitySpawnData
         {
             prefabName = prefabName,
             position = tr.position,
             rotationZ = tr.eulerAngles.z,
-            scale = new Vector2(tr.localScale.x, tr.localScale.y)
+            scale = scale
         };
     }
 
