@@ -15,6 +15,13 @@ public static class FloorEditorLock
         LockFloorObjects();
     }
 
+    [MenuItem("Tools/Lock All Floor Objects")]
+    public static void LockAllFloorsMenu()
+    {
+        LockFloorObjects();
+        Debug.Log("All Floor objects locked (NotEditable) in the editor.");
+    }
+
     static void LockFloorObjects()
     {
         foreach (var floor in GameObject.FindGameObjectsWithTag("Floor"))
@@ -25,6 +32,24 @@ public static class FloorEditorLock
                 EditorUtility.SetDirty(floor);
             }
         }
+    }
+
+    [MenuItem("Tools/Unlock All Floor Objects")]
+    public static void UnlockAllFloors()
+    {
+        GameObject last = null;
+        foreach (var floor in GameObject.FindGameObjectsWithTag("Floor"))
+        {
+            if ((floor.hideFlags & HideFlags.NotEditable) != 0)
+            {
+                floor.hideFlags &= ~HideFlags.NotEditable;
+                EditorUtility.SetDirty(floor);
+                last = floor;
+            }
+        }
+        if (last != null)
+            Selection.activeObject = last; // 마지막 Floor를 강제로 선택
+        Debug.Log("All Floor objects unlocked for editing.");
     }
 }
 #endif

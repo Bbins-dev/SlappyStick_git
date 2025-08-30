@@ -230,19 +230,44 @@ MonoBehaviour:
   initialTarget: {fileID: 0}
   initialFocusDuration: 1.5
   initialFocusLerp: 5
-  travelZoomSmoothTime: 0.5
   positioningCamXY: {x: 0, y: 3.56}
   positioningMoveSpeed: 18
-  positioningMoveLerp: 0
   positioningArriveThreshold: 0.5
   initialZoomSize: 8
   travelZoomOutSize: 11
   positioningZoomInSize: 4
-  playZoomSize: 8
   zoomLerp: 6
+  travelZoomDuration: 0.45
+  travelZoomCurve:
+    serializedVersion: 2
+    m_Curve:
+    - serializedVersion: 3
+      time: 0
+      value: 0
+      inSlope: 0
+      outSlope: 0
+      tangentMode: 0
+      weightedMode: 0
+      inWeight: 0
+      outWeight: 0
+    - serializedVersion: 3
+      time: 1
+      value: 1
+      inSlope: 0
+      outSlope: 0
+      tangentMode: 0
+      weightedMode: 0
+      inWeight: 0
+      outWeight: 0
+    m_PreInfinity: 2
+    m_PostInfinity: 2
+    m_RotationOrder: 4
   target: {fileID: 0}
   offset: {x: 0, y: 0, z: -10}
   followLerp: 8
+  followBaseSize: 8
+  followZoomFactor: 0.5
+  followZoomLerp: 8
 --- !u!1 &710615545
 GameObject:
   m_ObjectHideFlags: 0
