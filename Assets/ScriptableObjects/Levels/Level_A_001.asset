@@ -13,7 +13,7 @@ MonoBehaviour:
   m_Name: Level_A_001
   m_EditorClassIdentifier: 
   cameraInitial:
-    position: {x: 15.51, y: 9.24, z: -10}
+    position: {x: 16.5, y: 9.24, z: -10}
     rotationZ: 0
     orthographicSize: 7
     fieldOfView: 0
@@ -56,8 +56,8 @@ MonoBehaviour:
           - {x: -0.080284, y: 2.9153128}
         edgePoints: []
   stickSpawn:
-    prefabName: Stick
-    position: {x: 0.10999966, y: 2, z: 0}
+    prefabName: St_A_01
+    position: {x: 0.58, y: 2.45, z: 10}
     rotationZ: 0
     scale: {x: 1, y: 1}
   targets:
@@ -129,3 +129,14 @@ MonoBehaviour:
         capsuleDirection: 0
         paths: []
         edgePoints: []
+  obstacleSpawns: []
+  targetSpawns:
+  - prefabName: Ta_A_01
+    position: {x: 16.28, y: 1.99, z: 0}
+    rotationZ: 0
+    scale: {x: 1, y: 1}
+  fulcrumSpawns:
+  - prefabName: Fu_A_01
+    position: {x: -0.72, y: 1.2, z: 0}
+    rotationZ: 0
+    scale: {x: 1, y: 1}
