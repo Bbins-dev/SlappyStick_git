@@ -14,7 +14,9 @@ public class LevelManager : MonoBehaviour
     [Header("Parent for spawned objects")]
     public Transform dynamicRoot;
 
-    private readonly List<Resettable2D> obstacleResets = new List<Resettable2D>();
+    private readonly List<Resettable2D> allResets = new List<Resettable2D>();
+    private LevelData currentLevelData;
+
     private void Start()
     {
 #if UNITY_EDITOR
@@ -22,24 +24,23 @@ public class LevelManager : MonoBehaviour
 #endif
 
         EnsureDynamicRoot();
-
-        LevelData data = null;
-
+        // LevelData 결정
 #if UNITY_EDITOR
         if (useEditorOverride && editorOverrideLevel != null)
-        {
-            data = editorOverrideLevel;
-            Debug.Log($"[LevelManager] Using editorOverrideLevel: {data.name}");
-        }
+            currentLevelData = editorOverrideLevel;
         else
 #endif
         {
             var gm = GameManager.Instance;
             var db = gm != null ? gm.Database : null;
-            data = db != null ? db.Get(gm.CurrentLevel) : null;
-            Debug.Log($"[LevelManager] Using GameManager/DB: data={(data ? data.name : "NULL")}");
+            currentLevelData = db != null ? db.Get(gm.CurrentLevel) : null;
         }
+        Build(currentLevelData);
+    }
 
+    private void Build(LevelData data)
+    {
+        allResets.Clear();
         if (data == null)
         {
             Debug.LogError("[LevelManager] LevelData not found. Assign editorOverrideLevel in MakingScene.");
@@ -60,6 +61,12 @@ public class LevelManager : MonoBehaviour
             {
                 stickGo = Instantiate(prefab, data.stickSpawn.position, Quaternion.Euler(0, 0, data.stickSpawn.rotationZ), dynamicRoot);
                 stickGo.transform.localScale = new Vector3(data.stickSpawn.scale.x, data.stickSpawn.scale.y, 1f);
+                stickGo.name = data.stickSpawn.prefabName;
+                // Resettable2D, TipTrigger 보장
+                if (stickGo.GetComponent<Resettable2D>() == null) stickGo.AddComponent<Resettable2D>();
+                var tip = stickGo.transform.Find("Tip");
+                if (tip != null && tip.GetComponent<TipTrigger>() == null) tip.gameObject.AddComponent<TipTrigger>();
+                allResets.Add(stickGo.GetComponent<Resettable2D>());
             }
         }
         // fallback: 기존 방식
@@ -80,6 +87,9 @@ public class LevelManager : MonoBehaviour
                 }
                 var go = Instantiate(prefab, t.position, Quaternion.Euler(0, 0, t.rotationZ), dynamicRoot);
                 go.transform.localScale = new Vector3(t.scale.x, t.scale.y, 1f);
+                go.name = t.prefabName;
+                if (go.GetComponent<Resettable2D>() == null) go.AddComponent<Resettable2D>();
+                allResets.Add(go.GetComponent<Resettable2D>());
                 if (firstTarget == null) firstTarget = go.transform;
             }
         }
@@ -105,6 +115,9 @@ public class LevelManager : MonoBehaviour
                 }
                 var go = Instantiate(prefab, o.position, Quaternion.Euler(0, 0, o.rotationZ), dynamicRoot);
                 go.transform.localScale = new Vector3(o.scale.x, o.scale.y, 1f);
+                go.name = o.prefabName;
+                if (go.GetComponent<Resettable2D>() == null) go.AddComponent<Resettable2D>();
+                allResets.Add(go.GetComponent<Resettable2D>());
             }
         }
         else if (data.obstacles != null)
@@ -126,6 +139,9 @@ public class LevelManager : MonoBehaviour
                 }
                 var go = Instantiate(prefab, f.position, Quaternion.Euler(0, 0, f.rotationZ), dynamicRoot);
                 go.transform.localScale = new Vector3(f.scale.x, f.scale.y, 1f);
+                go.name = f.prefabName;
+                if (go.GetComponent<Resettable2D>() == null) go.AddComponent<Resettable2D>();
+                allResets.Add(go.GetComponent<Resettable2D>());
             }
         }
         else if (data.fulcrums != null)
@@ -219,9 +235,7 @@ public class LevelManager : MonoBehaviour
             // 3) Get-or-Add Resettable2D (초기 상태 캡처 → 이벤트/강제 리셋 대응)
             var reset = go.GetComponent<Resettable2D>();
             if (reset == null) reset = go.AddComponent<Resettable2D>();
-
-            // 4) Register for manager-wide reset
-            if (obstacleResets != null) obstacleResets.Add(reset);
+            allResets.Add(reset);
         }
 
 
@@ -398,17 +412,42 @@ public class LevelManager : MonoBehaviour
     }
 #endif
 
-    public void ResetObstacles()
+    public void ResetAllEntities()
     {
         int count = 0;
-        foreach (var r in obstacleResets)
+        foreach (var r in allResets)
         {
             if (r == null) continue;
             r.ResetNow();
             count++;
         }
-        Debug.Log($"[LevelManager] ResetObstacles invoked: {count} items.");
+        Debug.Log($"[LevelManager] ResetAllEntities invoked: {count} items.");
     }
+
+    public void RestartLevel()
+    {
+        // 1. DynamicRoot 하위 게임 오브젝트(Stick, Target, Obstacle, Fulcrum 등)만 삭제
+        if (dynamicRoot != null)
+        {
+            var toDestroy = new List<GameObject>();
+            foreach (Transform child in dynamicRoot)
+            {
+                // UI가 아닌 오브젝트만 삭제 (UI는 별도 계층에 있어야 함)
+                toDestroy.Add(child.gameObject);
+            }
+            foreach (var go in toDestroy)
+            {
+                Destroy(go);
+            }
+        }
+        // 2. allResets 리스트 Clear
+        allResets.Clear();
+        // 3. 레벨 데이터로 다시 빌드
+        Build(currentLevelData);
+        // 4. 필요시 UI/팝업 등은 별도 관리 (ClearPopup 등은 외부에서 닫기)
+        Debug.Log("[LevelManager] RestartLevel: 오브젝트/이벤트/리스트 초기화 및 재생성 완료");
+    }
+
     private Camera FindWorldCamera()
     {
         var cams = GameObject.FindObjectsOfType<Camera>(true);

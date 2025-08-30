@@ -471,7 +471,7 @@ rb.constraints = restored;
         ResetBus.Raise();
         Debug.Log("[StickMove] ResetBus.Raise()");
 
-        FindObjectOfType<LevelManager>()?.ResetObstacles();
+        FindObjectOfType<LevelManager>()?.ResetAllEntities();
 
         surfaceContacts = 0;
         surfaceIdleTimer = 0f;

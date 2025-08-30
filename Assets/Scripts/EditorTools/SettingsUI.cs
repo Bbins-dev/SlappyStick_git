@@ -117,6 +117,16 @@ public class SettingsUI : MonoBehaviour
     public void OnRestart()
     {
         Time.timeScale = 1f;
+        if (panel) panel.Close(); // 메뉴창 닫기 (Resume과 동일)
+#if UNITY_EDITOR
+        var lm = FindObjectOfType<LevelManager>();
+        if (lm != null)
+        {
+            lm.RestartLevel();
+            Debug.Log("[SettingsUI] Editor: LevelManager.RestartLevel() 호출");
+            return;
+        }
+#endif
         SceneManager.LoadScene(playSceneName, LoadSceneMode.Single);
     }
 }

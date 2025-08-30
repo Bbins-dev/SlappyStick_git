@@ -1,5 +1,6 @@
 using UnityEngine;
 using UnityEngine.Events;
+using System.Collections.Generic;
 
 [AddComponentMenu("StickIt/TipTrigger")]
 [DisallowMultipleComponent]
@@ -37,6 +38,37 @@ public class TipTrigger : MonoBehaviour
     private RigidbodyType2D originalBodyType;
     private float originalGravityScale;
     public bool HasTriggered => triggered;
+
+    private static Dictionary<Rigidbody2D, bool> _wobbleOriginalKinematic = new Dictionary<Rigidbody2D, bool>();
+    private static bool _wobbleActive = false;
+
+    private static void SetOtherRigidbodiesKinematic(bool kinematic, Transform stickRoot)
+    {
+        var all = Object.FindObjectsOfType<Rigidbody2D>();
+        foreach (var rb in all)
+        {
+            if (rb == null || rb.transform == stickRoot) continue;
+            if (kinematic)
+            {
+                if (!_wobbleOriginalKinematic.ContainsKey(rb))
+                    _wobbleOriginalKinematic[rb] = rb.isKinematic;
+                rb.isKinematic = true;
+            }
+            else
+            {
+                if (_wobbleOriginalKinematic.TryGetValue(rb, out var orig))
+                    rb.isKinematic = orig;
+            }
+        }
+        if (!kinematic) _wobbleOriginalKinematic.Clear();
+        _wobbleActive = kinematic;
+    }
+
+    public static void ForceWobbleEndCleanup()
+    {
+        if (_wobbleActive)
+            SetOtherRigidbodiesKinematic(false, null);
+    }
 
     private void Awake()
     {
@@ -111,53 +143,63 @@ public class TipTrigger : MonoBehaviour
 
     private System.Collections.IEnumerator DoStuckSequence(Collider2D targetCol)
     {
-        if (stickRb != null)
+        // Wobble 시작: 다른 Rigidbody2D를 Kinematic으로
+        SetOtherRigidbodiesKinematic(true, stickRoot);
+        try
         {
-            originalBodyType = stickRb.bodyType;
-            originalGravityScale = stickRb.gravityScale;
-            stickRb.velocity = Vector2.zero;
-            stickRb.angularVelocity = 0f;
-            stickRb.bodyType = RigidbodyType2D.Kinematic;
-            stickRb.gravityScale = 0f;
+            if (stickRb != null)
+            {
+                originalBodyType = stickRb.bodyType;
+                originalGravityScale = stickRb.gravityScale;
+                stickRb.velocity = Vector2.zero;
+                stickRb.angularVelocity = 0f;
+                stickRb.bodyType = RigidbodyType2D.Kinematic;
+                stickRb.gravityScale = 0f;
+            }
+
+            Vector3 startPos = stickRoot.position;
+            Vector3 tipPos = transform.position;
+            Vector3 closest = targetCol ? (Vector3)targetCol.ClosestPoint(tipPos) : tipPos + stickRoot.up * 0.01f;
+            Vector3 dir = closest - tipPos;
+            if (dir.sqrMagnitude < 1e-6f) dir = stickRoot.up;
+            dir.Normalize();
+            Vector3 endPos = startPos + dir * pushInDistance;
+
+            // Push-in ease-out (≈0.2s)
+            float t = 0f;
+            while (t < pushInDuration)
+            {
+                t += Time.deltaTime;
+                float p = Mathf.Clamp01(t / pushInDuration);
+                float eased = 1f - Mathf.Pow(1f - p, 3f);
+                stickRoot.position = Vector3.LerpUnclamped(startPos, endPos, eased);
+                yield return null;
+            }
+
+            // Wobble around tip pivot
+            Vector3 pivot = transform.position;
+            float time = 0f;
+            float prevAngle = 0f;
+
+            while (time < wobbleDuration)
+            {
+                time += Time.deltaTime;
+                float amp = wobbleAmplitude * Mathf.Exp(-wobbleDamping * time);
+                float angle = amp * Mathf.Sin(2f * Mathf.PI * wobbleFrequency * time);
+                float delta = angle - prevAngle;
+                prevAngle = angle;
+                stickRoot.RotateAround(pivot, Vector3.forward, delta);
+                yield return null;
+            }
+
+            if (Mathf.Abs(prevAngle) > 0.001f)
+                stickRoot.RotateAround(pivot, Vector3.forward, -prevAngle);
         }
-
-        Vector3 startPos = stickRoot.position;
-        Vector3 tipPos = transform.position;
-        Vector3 closest = targetCol ? (Vector3)targetCol.ClosestPoint(tipPos) : tipPos + stickRoot.up * 0.01f;
-        Vector3 dir = closest - tipPos;
-        if (dir.sqrMagnitude < 1e-6f) dir = stickRoot.up;
-        dir.Normalize();
-        Vector3 endPos = startPos + dir * pushInDistance;
-
-        // Push-in ease-out (≈0.2s)
-        float t = 0f;
-        while (t < pushInDuration)
+        finally
         {
-            t += Time.deltaTime;
-            float p = Mathf.Clamp01(t / pushInDuration);
-            float eased = 1f - Mathf.Pow(1f - p, 3f);
-            stickRoot.position = Vector3.LerpUnclamped(startPos, endPos, eased);
-            yield return null;
+            // Wobble 종료: 다른 Rigidbody2D 원래대로 복원
+            SetOtherRigidbodiesKinematic(false, stickRoot);
         }
-
-        // Wobble around tip pivot
-        Vector3 pivot = transform.position;
-        float time = 0f;
-        float prevAngle = 0f;
-
-        while (time < wobbleDuration)
-        {
-            time += Time.deltaTime;
-            float amp = wobbleAmplitude * Mathf.Exp(-wobbleDamping * time);
-            float angle = amp * Mathf.Sin(2f * Mathf.PI * wobbleFrequency * time);
-            float delta = angle - prevAngle;
-            prevAngle = angle;
-            stickRoot.RotateAround(pivot, Vector3.forward, delta);
-            yield return null;
-        }
-
-        if (Mathf.Abs(prevAngle) > 0.001f)
-            stickRoot.RotateAround(pivot, Vector3.forward, -prevAngle);
     }
 
     [ContextMenu("Debug Reset Triggered")]
