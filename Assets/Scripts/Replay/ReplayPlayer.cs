@@ -18,6 +18,7 @@ public class ReplayPlayer : MonoBehaviour
     private bool isPlaying;
     private bool isInterpolating;
     private float replayStartTime;
+    
 
     // 카메라 핸들/복구 정보
     private StickItCamera camFollow;
@@ -210,7 +211,26 @@ public class ReplayPlayer : MonoBehaviour
         isPlaying = true;
         isInterpolating = true;
         replayStartTime = Time.realtimeSinceStartup;
-        yield break;
+        
+        Debug.Log($"[ReplayPlayer] ★★★ 리플레이 재생 시작 ★★★ Time: {Time.time:F3}");
+        Debug.Log($"[ReplayPlayer] 바인딩된 타겟 수: {boundTargets.Count}");
+        for (int i = 0; i < boundTargets.Count; i++)
+        {
+            var target = boundTargets[i];
+            if (target != null)
+            {
+                var rb = target.GetComponent<Rigidbody2D>();
+                Debug.Log($"[ReplayPlayer] 타겟[{i}]: {target.name}, Rigidbody2D: {rb != null}, Position: {target.position}");
+            }
+        }
+        
+        // 실제 재생이 끝날 때까지 대기 (Update에서 EndReplay 호출할 때까지)
+        while (isInterpolating)
+        {
+            yield return null;
+        }
+        
+        Debug.Log($"[ReplayPlayer] ★★★ 리플레이 재생 완료 ★★★ Time: {Time.time:F3}");
     }
     
     private Transform FindStickTarget()
@@ -236,6 +256,7 @@ public class ReplayPlayer : MonoBehaviour
     {
         if (!isInterpolating || data == null) return;
         float elapsed = Time.realtimeSinceStartup - replayStartTime;
+        
         float step = Mathf.Max(0.0001f, data.step);
         int tracks = data.trackCount;
         int frameCount = data.pos.Length / tracks;
@@ -250,7 +271,18 @@ public class ReplayPlayer : MonoBehaviour
                 var tr = boundTargets[trk];
                 if (!tr) continue;
                 int idx = (frameCount - 1) * tracks + trk;
-                tr.SetPositionAndRotation(data.pos[idx], Quaternion.Euler(0, 0, data.rotZ[idx]));
+                
+                // Rigidbody가 있으면 물리 기반으로, 없으면 Transform 직접 설정
+                var rb = tr.GetComponent<Rigidbody2D>();
+                if (rb != null && !rb.isKinematic)
+                {
+                    rb.position = data.pos[idx];
+                    rb.rotation = data.rotZ[idx];
+                }
+                else
+                {
+                    tr.SetPositionAndRotation(data.pos[idx], Quaternion.Euler(0, 0, data.rotZ[idx]));
+                }
             }
             EndReplay();
             return;
@@ -262,12 +294,22 @@ public class ReplayPlayer : MonoBehaviour
             int idx0 = f0 * tracks + trk;
             int idx1 = f1 * tracks + trk;
             Vector3 pos = Vector3.Lerp(data.pos[idx0], data.pos[idx1], lerp);
-            Quaternion rot = Quaternion.Slerp(
-                Quaternion.Euler(0, 0, data.rotZ[idx0]),
-                Quaternion.Euler(0, 0, data.rotZ[idx1]),
-                lerp
-            );
-            tr.SetPositionAndRotation(pos, rot);
+            float rotZ = Mathf.LerpAngle(data.rotZ[idx0], data.rotZ[idx1], lerp);
+            
+            // Rigidbody가 있으면 물리 기반으로, 없으면 Transform 직접 설정
+            var rb = tr.GetComponent<Rigidbody2D>();
+            if (rb != null && !rb.isKinematic)
+            {
+                // 물리 기반 움직임으로 충돌 감지 가능
+                rb.position = pos;
+                rb.rotation = rotZ;
+            }
+            else
+            {
+                // Transform 직접 설정 (물리 충돌 없음)
+                tr.SetPositionAndRotation(pos, Quaternion.Euler(0, 0, rotZ));
+            }
         }
     }
+    
 }

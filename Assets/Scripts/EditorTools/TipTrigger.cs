@@ -94,17 +94,29 @@ public class TipTrigger : MonoBehaviour
 
     private void OnTriggerEnter2D(Collider2D other)
     {
-        if (triggered) return;
-        if (!string.IsNullOrEmpty(targetTag) && !other.CompareTag(targetTag)) return;
+        Debug.Log($"[TipTrigger] OnTriggerEnter2D 호출됨 - Trigger: {name}, Other: {other.name}, Tag: {other.tag}, Triggered: {triggered}");
+        
+        if (triggered) 
+        {
+            Debug.Log($"[TipTrigger] 이미 트리거됨 - 무시");
+            return;
+        }
+        
+        if (!string.IsNullOrEmpty(targetTag) && !other.CompareTag(targetTag)) 
+        {
+            Debug.Log($"[TipTrigger] 태그 불일치 - 예상: {targetTag}, 실제: {other.tag}");
+            return;
+        }
 
         triggered = true;
+        Debug.Log($"[TipTrigger] ★★★ 트리거 활성화됨! ★★★ Time: {Time.time:F3}");
 
-        // KISS 원칙: 바로 이벤트 발생 + wobble 이펙트
+        // 즉시 실행 항목들
         SaveReplayOnSuccess();
-        TryNotifyGameManager();
         onStageCleared?.Invoke();
-
-        // wobble 이펙트는 별도로 실행
+        TryNotifyGameManager();
+        
+        // Wobble 이펙트 시작
         StartCoroutine(DoStuckSequence(other));
     }
 
@@ -186,9 +198,16 @@ public class TipTrigger : MonoBehaviour
         }
     }
 
+
+    /// <summary>
+    /// Wobble 이펙트 시퀀스 (일반/리플레이 공용)
+    /// </summary>
     private System.Collections.IEnumerator DoStuckSequence(Collider2D targetCol)
     {
+        Debug.Log($"[TipTrigger] DoStuckSequence 시작 - Time: {Time.time:F3}");
+        
         // Wobble 시작: 다른 Rigidbody2D를 Kinematic으로
+        Debug.Log($"[TipTrigger] 다른 Rigidbody2D를 Kinematic으로 설정");
         SetOtherRigidbodiesKinematic(true, stickRoot);
         try
         {
@@ -211,6 +230,7 @@ public class TipTrigger : MonoBehaviour
             Vector3 endPos = startPos + dir * pushInDistance;
 
             // Push-in ease-out (≈0.2s)
+            Debug.Log($"[TipTrigger] Push-in 시작 ({pushInDuration}초)");
             float t = 0f;
             while (t < pushInDuration)
             {
@@ -220,11 +240,14 @@ public class TipTrigger : MonoBehaviour
                 stickRoot.position = Vector3.LerpUnclamped(startPos, endPos, eased);
                 yield return null;
             }
+            Debug.Log($"[TipTrigger] Push-in 완료");
 
             // Wobble around tip pivot
             Vector3 pivot = transform.position;
+            Debug.Log($"[TipTrigger] Wobble 시작 ({wobbleDuration}초) - Pivot: {pivot}");
             float time = 0f;
             float prevAngle = 0f;
+            int frameCount = 0;
 
             while (time < wobbleDuration)
             {
@@ -234,8 +257,10 @@ public class TipTrigger : MonoBehaviour
                 float delta = angle - prevAngle;
                 prevAngle = angle;
                 stickRoot.RotateAround(pivot, Vector3.forward, delta);
+                frameCount++;
                 yield return null;
             }
+            Debug.Log($"[TipTrigger] Wobble 완료 - {frameCount}프레임 실행");
 
             if (Mathf.Abs(prevAngle) > 0.001f)
                 stickRoot.RotateAround(pivot, Vector3.forward, -prevAngle);

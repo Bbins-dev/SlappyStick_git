@@ -36,7 +36,7 @@ public class ReplayManager : MonoBehaviour
 
     // Binary header
     const uint MAGIC = 0x53525032; // "SRP2"
-    const int VERSION = 3; // v3: 고유 식별자 시스템 지원
+    const int VERSION = 4; // v4: 이벤트 데이터 시스템 지원
 
     [Header("Record Settings")]
     [Tooltip("Sampling interval in seconds (unscaled)")]
@@ -57,6 +57,7 @@ public class ReplayManager : MonoBehaviour
     private readonly List<float> _times = new(2048);
     private readonly List<Vector3> _pos = new(4096);
     private readonly List<float> _rotZ = new(4096);
+    
 
     private int _trackCount;
     private bool _isRecording;
@@ -153,12 +154,30 @@ public class ReplayManager : MonoBehaviour
     }
 
     public bool HasCache => File.Exists(CacheFilePath);
+    
+    /// <summary>
+    /// 현재 녹화 중인지 확인
+    /// </summary>
+    public bool IsRecording => _isRecording;
+    
+    /// <summary>
+    /// 리플레이 재생 중인지 확인 (ReplayPlayer 상태 체크)
+    /// </summary>
+    public bool IsReplaying
+    {
+        get
+        {
+            var player = FindObjectOfType<ReplayPlayer>(true);
+            return player != null && player.IsPlaying;
+        }
+    }
 
     public void TryDeleteCache()
     {
         try { if (File.Exists(CacheFilePath)) File.Delete(CacheFilePath); }
         catch { /* ignore */ }
     }
+    
 
     public ReplayData LoadFromCache()
     {
@@ -318,6 +337,9 @@ public class ReplayManager : MonoBehaviour
                 for (int i = 0; i < d.identifiers.Length; i++)
                     bw.Write(d.identifiers[i] ?? "");
             }
+            
+            // events (v4 이상) - 빈 배열 저장
+            bw.Write(0);
 
             // times
             bw.Write(d.times.Length);
@@ -384,6 +406,19 @@ public class ReplayManager : MonoBehaviour
                     data.identifiers[i] = path; // 경로를 식별자로 사용 (하위 호환)
                 }
 #pragma warning restore CS0618
+            }
+            
+            // events (v4 이상) - 읽기만 하고 무시
+            if (version >= 4)
+            {
+                int nEvents = br.ReadInt32();
+                for (int i = 0; i < nEvents; i++)
+                {
+                    br.ReadSingle(); // timestamp
+                    br.ReadString(); // eventType
+                    br.ReadString(); // targetId
+                    br.ReadString(); // extraData
+                }
             }
 
             int nTimes = br.ReadInt32();

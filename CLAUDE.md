@@ -108,7 +108,9 @@ SlappyStick is a Unity 2D physics puzzle game built in Unity 2023.3+. The projec
 ### Key Components
 - **StickMove**: Main player controller - handles mouse input, physics movement, auto-reset logic, UI feedback
 - **StickItCamera**: Camera management for gameplay
-- **ReplayManager/ReplayPlayer**: Replay system - records transform data, saves/loads replay files, binary format
+- **ReplayManager/ReplayPlayer**: Replay system - records transform data, saves/loads replay files, binary format with unique ID support
+- **TipTrigger**: Goal detection with wobble effects - handles replay/normal play timing differences
+- **ClearPopupController/ClearPopupDriver**: Level completion UI with replay-aware timing
 - **UIOverlayKeeper**: UI state management
 
 ### Editor Tools
@@ -144,6 +146,7 @@ Located in `Assets/Scripts/EditorTools/`:
 - Don't use GetComponent in Update loops
 - Don't ignore Unity's execution order
 - Don't hardcode values that should be configurable
+- **Replay System**: Be careful with timing between replay playback and UI events - use ReplayManager.IsReplaying for proper sequencing
 
 ## Performance Guidelines
 - Cache component references in Start/Awake
