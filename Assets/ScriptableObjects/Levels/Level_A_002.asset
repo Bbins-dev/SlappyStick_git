@@ -13,7 +13,7 @@ MonoBehaviour:
   m_Name: Level_A_002
   m_EditorClassIdentifier: 
   cameraInitial:
-    position: {x: 23.4, y: 9.24, z: -10}
+    position: {x: 21.9, y: 9.24, z: -10}
     rotationZ: 0
     orthographicSize: 7
     fieldOfView: 0
@@ -57,7 +57,7 @@ MonoBehaviour:
         edgePoints: []
   stickSpawn:
     prefabName: St_A_01
-    position: {x: 0.11, y: 2, z: 10}
+    position: {x: 0.58, y: 2.45, z: 10}
     rotationZ: 0
     scale: {x: 1, y: 1}
   targets: []
@@ -65,16 +65,16 @@ MonoBehaviour:
   fulcrums: []
   obstacleSpawns:
   - prefabName: Ob_A_01
-    position: {x: 16.25, y: 2.3, z: 0}
+    position: {x: 11.1, y: 1.89, z: 0}
     rotationZ: 0
-    scale: {x: 0.47999996, y: 0.47999996}
+    scale: {x: 1, y: 1}
   targetSpawns:
   - prefabName: Ta_A_01
-    position: {x: 23.76, y: 2.03, z: 0}
+    position: {x: 22, y: 1.99, z: 0}
     rotationZ: 0
     scale: {x: 1, y: 1}
   fulcrumSpawns:
   - prefabName: Fu_A_01
-    position: {x: -0.6899996, y: 0.9484062, z: 0}
+    position: {x: -0.72, y: 1.2, z: 0}
     rotationZ: 0
     scale: {x: 1, y: 1}
