@@ -125,6 +125,7 @@ public class LevelConfigurator : MonoBehaviour
         var obstacleList = new List<LevelData.EntitySpawnData>();
         var targetList = new List<LevelData.EntitySpawnData>();
         var fulcrumList = new List<LevelData.EntitySpawnData>();
+        var backgroundList = new List<LevelData.EntitySpawnData>();
 
         for (int i = 0; i < previewGroup.childCount; i++)
         {
@@ -159,6 +160,12 @@ public class LevelConfigurator : MonoBehaviour
                 fulcrumList.Add(CaptureEntitySpawnData(go));
                 Debug.Log($"[LevelConfigurator] Fulcrum 추가: {name}");
             }
+            // Background
+            else if (tag == "Background" && name.StartsWith("Bg_"))
+            {
+                backgroundList.Add(CaptureEntitySpawnData(go));
+                Debug.Log($"[LevelConfigurator] Background 추가: {name}");
+            }
             // 임시/기타 오브젝트는 무시
             else
             {
@@ -176,7 +183,12 @@ public class LevelConfigurator : MonoBehaviour
         levelData.targetSpawns = targetList.ToArray();
         levelData.fulcrumSpawns = fulcrumList.ToArray();
 
-        Debug.Log($"[LevelConfigurator] 저장 결과 - Stick: {stickList.Count}, Obstacle: {obstacleList.Count}, Target: {targetList.Count}, Fulcrum: {fulcrumList.Count}");
+        // Background는 1개만 허용, 여러 개면 경고
+        if (backgroundList.Count > 1)
+            Debug.LogWarning($"[LevelConfigurator] Background(프리팹)이 2개 이상입니다. 첫 번째만 저장합니다.");
+        levelData.backgroundSpawn = backgroundList.Count > 0 ? backgroundList[0] : default;
+
+        Debug.Log($"[LevelConfigurator] 저장 결과 - Stick: {stickList.Count}, Obstacle: {obstacleList.Count}, Target: {targetList.Count}, Fulcrum: {fulcrumList.Count}, Background: {backgroundList.Count}");
 
         // 5. 기존 EntityData 자동 비움
         levelData.obstacles = new LevelData.EntityData[0];
@@ -192,7 +204,8 @@ public class LevelConfigurator : MonoBehaviour
         // 7. 저장 후 prefabSpawns가 비어 있으면 경고 출력
         if ((levelData.obstacleSpawns == null || levelData.obstacleSpawns.Length == 0) &&
             (levelData.targetSpawns == null || levelData.targetSpawns.Length == 0) &&
-            (levelData.fulcrumSpawns == null || levelData.fulcrumSpawns.Length == 0))
+            (levelData.fulcrumSpawns == null || levelData.fulcrumSpawns.Length == 0) &&
+            string.IsNullOrEmpty(levelData.backgroundSpawn.prefabName))
         {
             Debug.LogWarning($"[LevelConfigurator] prefabSpawns가 비어 있습니다. PreviewGroup 하위에 프리팹 인스턴스가 맞는지, 이름/태그 규칙이 맞는지 확인하세요.");
         }
@@ -234,6 +247,7 @@ public class LevelConfigurator : MonoBehaviour
         Debug.Log($"[LevelConfigurator] - targetSpawns: {(levelData.targetSpawns != null ? levelData.targetSpawns.Length : 0)}개");
         Debug.Log($"[LevelConfigurator] - obstacleSpawns: {(levelData.obstacleSpawns != null ? levelData.obstacleSpawns.Length : 0)}개");
         Debug.Log($"[LevelConfigurator] - fulcrumSpawns: {(levelData.fulcrumSpawns != null ? levelData.fulcrumSpawns.Length : 0)}개");
+        Debug.Log($"[LevelConfigurator] - backgroundSpawn.prefabName: {levelData.backgroundSpawn.prefabName}");
         
         int spawnCount = 0;
 
@@ -436,6 +450,54 @@ public class LevelConfigurator : MonoBehaviour
                 }
 #endif
             }
+        }
+
+        // Background
+        if (!string.IsNullOrEmpty(levelData.backgroundSpawn.prefabName))
+        {
+            string backgroundPath = $"Backgrounds/{levelData.backgroundSpawn.prefabName}";
+            Debug.Log($"[LevelConfigurator] Background 프리팹 로드 시도: {backgroundPath}");
+            
+            // Resources 폴더 내 모든 프리팹 확인
+            var allBackgrounds = Resources.LoadAll<GameObject>("Backgrounds");
+            Debug.Log($"[LevelConfigurator] Resources/Backgrounds 폴더 내 프리팹들: {string.Join(", ", allBackgrounds.Select(p => p.name))}");
+            
+#if UNITY_EDITOR
+            var backgroundPrefab = Resources.Load<GameObject>(backgroundPath);
+            if (backgroundPrefab != null)
+            {
+                var backgroundGo = (GameObject)PrefabUtility.InstantiatePrefab(backgroundPrefab, currentGroup);
+                backgroundGo.transform.position = levelData.backgroundSpawn.position;
+                backgroundGo.transform.rotation = Quaternion.Euler(0, 0, levelData.backgroundSpawn.rotationZ);
+                backgroundGo.transform.localScale = new Vector3(levelData.backgroundSpawn.scale.x, levelData.backgroundSpawn.scale.y, 1f);
+                backgroundGo.name = levelData.backgroundSpawn.prefabName;
+                Undo.RegisterCreatedObjectUndo(backgroundGo, "Load Background");
+                Debug.Log($"[LevelConfigurator] Background 프리팹 인스턴스(파란색)로 로드: {levelData.backgroundSpawn.prefabName}, 스케일: {levelData.backgroundSpawn.scale}");
+                spawnCount++;
+            }
+            else
+            {
+                Debug.LogError($"[LevelConfigurator] Background 프리팹을 찾을 수 없습니다: {backgroundPath}");
+                Debug.LogError($"[LevelConfigurator] 요청된 프리팹 이름: {levelData.backgroundSpawn.prefabName}");
+            }
+#else
+            // 기존 Instantiate 방식 (런타임)
+            var backgroundPrefab = Resources.Load<GameObject>(backgroundPath);
+            if (backgroundPrefab != null)
+            {
+                var backgroundGo = Instantiate(backgroundPrefab, levelData.backgroundSpawn.position, Quaternion.Euler(0, 0, levelData.backgroundSpawn.rotationZ), currentGroup);
+                backgroundGo.transform.localScale = new Vector3(levelData.backgroundSpawn.scale.x, levelData.backgroundSpawn.scale.y, 1f);
+                backgroundGo.name = levelData.backgroundSpawn.prefabName;
+                Undo.RegisterCreatedObjectUndo(backgroundGo, "Load Background");
+                Debug.Log($"[LevelConfigurator] Background 로드 성공: {levelData.backgroundSpawn.prefabName}, 스케일: {levelData.backgroundSpawn.scale}");
+                spawnCount++;
+            }
+            else
+            {
+                Debug.LogError($"[LevelConfigurator] Background 프리팹을 찾을 수 없습니다: {backgroundPath}");
+                Debug.LogError($"[LevelConfigurator] 요청된 프리팹 이름: {levelData.backgroundSpawn.prefabName}");
+            }
+#endif
         }
 
         // E) 기존 EntityData 방식 (fallback)
@@ -641,7 +703,8 @@ public class LevelConfigurator : MonoBehaviour
             if ((tag == "Stick" && prefabName.StartsWith("St_")) ||
                 (tag == "Obstacle" && prefabName.StartsWith("Ob_")) ||
                 (tag == "Fulcrum" && prefabName.StartsWith("Fu_")) ||
-                (tag == "Target" && prefabName.StartsWith("Ta_")))
+                (tag == "Target" && prefabName.StartsWith("Ta_")) ||
+                (tag == "Background" && prefabName.StartsWith("Bg_")))
             {
                 // prefabName 그대로 사용
                 Debug.Log($"[LevelConfigurator] 이름/태그 규칙에 맞는 오브젝트: {prefabName}, 스케일: {scale}");
@@ -879,6 +942,8 @@ public class LevelConfigurator : MonoBehaviour
             if (init.fieldOfView > 0f) cam.fieldOfView = init.fieldOfView;
         }
     }
+
+
 
     // 생성물 식별 플래그
     // private class GeneratedFlag : MonoBehaviour { }

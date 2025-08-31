@@ -115,4 +115,7 @@ public class LevelData : ScriptableObject
     public EntitySpawnData[] targetSpawns;
     [Header("Fulcrum (Prefab-based)")]
     public EntitySpawnData[] fulcrumSpawns;
+
+    [Header("Background (Prefab-based)")]
+    public EntitySpawnData backgroundSpawn;
 }
