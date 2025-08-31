@@ -12,6 +12,7 @@ TagManager:
   - Obstacle
   - GameManager
   - Floor
+  - Background
   layers:
   - Default
   - TransparentFX
@@ -24,7 +25,7 @@ TagManager:
   - Obstacle
   - PreviewTraget
   - Fulcrum
-  - 
+  - Background
   - 
   - 
   - 

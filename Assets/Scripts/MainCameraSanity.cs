@@ -10,7 +10,7 @@ public class MainCameraSanity : MonoBehaviour
     public bool forceEverythingExceptUI = true;
 
     [Tooltip("위 옵션을 끄면, 이 목록의 레이어들은 최소 포함되도록 보정")]
-    public string[] mustIncludeLayers = new[] { "Default","Stick","Target","Obstacle","Fulcrum" };
+    public string[] mustIncludeLayers = new[] { "Default","Stick","Target","Obstacle","Fulcrum","Background" };
 
     void Awake()  { FixNow(); }
     void OnEnable()

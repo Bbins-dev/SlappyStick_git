@@ -150,6 +150,23 @@ public class LevelManager : MonoBehaviour
                 BuildEntity(f, isStick: false, isObstacle: false);
         }
 
+        // 5) Background (Prefab 기반)
+        if (!string.IsNullOrEmpty(data.backgroundSpawn.prefabName))
+        {
+            var prefab = Resources.Load<GameObject>($"Backgrounds/{data.backgroundSpawn.prefabName}");
+            if (prefab == null)
+            {
+                Debug.LogError($"[LevelManager] Background prefab not found: {data.backgroundSpawn.prefabName}");
+            }
+            else
+            {
+                var go = Instantiate(prefab, data.backgroundSpawn.position, Quaternion.Euler(0, 0, data.backgroundSpawn.rotationZ), dynamicRoot);
+                go.transform.localScale = new Vector3(data.backgroundSpawn.scale.x, data.backgroundSpawn.scale.y, 1f);
+                go.name = data.backgroundSpawn.prefabName;
+                Debug.Log($"[LevelManager] Background loaded: {data.backgroundSpawn.prefabName} at position {data.backgroundSpawn.position}");
+            }
+        }
+
         var cam = FindWorldCamera();
         var camFollow = cam ? cam.GetComponent<StickItCamera>() : null;
         if (camFollow != null && stickGo != null)

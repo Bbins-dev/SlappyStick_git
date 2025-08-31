@@ -124,6 +124,6 @@ MonoBehaviour:
     scale: {x: 1, y: 1}
   backgroundSpawn:
     prefabName: Bg_A_01
-    position: {x: 21.7, y: 1.22, z: 10}
+    position: {x: 21.7, y: 1.22, z: 20}
     rotationZ: 0
     scale: {x: 4, y: 4}
