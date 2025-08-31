@@ -1,0 +1,91 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!687078895 &4343727234628468602
+SpriteAtlas:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_Name: New Sprite Atlas
+  m_EditorData:
+    serializedVersion: 2
+    textureSettings:
+      serializedVersion: 2
+      anisoLevel: 1
+      compressionQuality: 50
+      maxTextureSize: 2048
+      textureCompression: 0
+      filterMode: 1
+      generateMipMaps: 0
+      readable: 0
+      crunchedCompression: 0
+      sRGB: 1
+    platformSettings:
+    - serializedVersion: 3
+      m_BuildTarget: DefaultTexturePlatform
+      m_MaxTextureSize: 4096
+      m_ResizeAlgorithm: 0
+      m_TextureFormat: -1
+      m_TextureCompression: 0
+      m_CompressionQuality: 50
+      m_CrunchedCompression: 0
+      m_AllowsAlphaSplitting: 0
+      m_Overridden: 0
+      m_IgnorePlatformSupport: 0
+      m_AndroidETC2FallbackOverride: 0
+      m_ForceMaximumCompressionQuality_BC6H_BC7: 0
+    packingSettings:
+      serializedVersion: 2
+      padding: 4
+      blockOffset: 1
+      allowAlphaSplitting: 0
+      enableRotation: 1
+      enableTightPacking: 1
+      enableAlphaDilation: 0
+    secondaryTextureSettings: {}
+    variantMultiplier: 1
+    packables:
+    - {fileID: 102900000, guid: 568fc84b4321ade41b1cb792f4ab2581, type: 3}
+    bindAsDefault: 1
+    isAtlasV2: 0
+    cachedData: {fileID: 0}
+    packedSpriteRenderDataKeys:
+    - 9387baa123a3bf5438e0ddd7bd997cec: 21300000
+    - c8b256648fe0ce043acb77061f153659: 21300000
+    - 7760cc947cc19bb4b8396a9eda8d4813: 21300000
+    - bce2a6a56656d1e48a750e57e0da9a62: 21300000
+    - 5e5ae2f56b7b48540975e522bd1360b8: 21300000
+    - eca1c1576f19a6f43a1371eaa101d6a9: 21300000
+    - f79221b761e65a4438d739f38f9eb621: 21300000
+    - a5227b487774887439366633326fa110: 21300000
+    - f1107968790ea2748b3430fb7ee9f54e: 21300000
+    - 58d7dd8aea1e2d24eab60fdaa6fd365b: 21300000
+    - 22647b4d2202d3e48aff393de440c6ca: 21300000
+  m_MasterAtlas: {fileID: 0}
+  m_PackedSprites:
+  - {fileID: 21300000, guid: 9387baa123a3bf5438e0ddd7bd997cec, type: 3}
+  - {fileID: 21300000, guid: c8b256648fe0ce043acb77061f153659, type: 3}
+  - {fileID: 21300000, guid: 7760cc947cc19bb4b8396a9eda8d4813, type: 3}
+  - {fileID: 21300000, guid: bce2a6a56656d1e48a750e57e0da9a62, type: 3}
+  - {fileID: 21300000, guid: 5e5ae2f56b7b48540975e522bd1360b8, type: 3}
+  - {fileID: 21300000, guid: eca1c1576f19a6f43a1371eaa101d6a9, type: 3}
+  - {fileID: 21300000, guid: f79221b761e65a4438d739f38f9eb621, type: 3}
+  - {fileID: 21300000, guid: a5227b487774887439366633326fa110, type: 3}
+  - {fileID: 21300000, guid: f1107968790ea2748b3430fb7ee9f54e, type: 3}
+  - {fileID: 21300000, guid: 58d7dd8aea1e2d24eab60fdaa6fd365b, type: 3}
+  - {fileID: 21300000, guid: 22647b4d2202d3e48aff393de440c6ca, type: 3}
+  m_PackedSpriteNamesToIndex:
+  - obstacle_human_down
+  - target_chicken
+  - obstacle_bottle
+  - stick_straw
+  - stick_fork
+  - obstacle_human
+  - obstacle_hat_low
+  - fulcrum_bowl
+  - obstacle_hat_high
+  - obstacle_cocktail_shaker
+  - fulcrum_bartender
+  m_RenderDataMap: {}
+  m_Tag: New Sprite Atlas
+  m_IsVariant: 0

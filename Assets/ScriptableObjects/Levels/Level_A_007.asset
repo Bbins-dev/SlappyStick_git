@@ -91,6 +91,6 @@ MonoBehaviour:
     rotationZ: 0
     scale: {x: 1, y: 1}
   - prefabName: Fu_A_02
-    position: {x: 9.2, y: 1.52, z: -1}
+    position: {x: 9.41, y: 1.28, z: -1}
     rotationZ: 0
     scale: {x: 1, y: 1}

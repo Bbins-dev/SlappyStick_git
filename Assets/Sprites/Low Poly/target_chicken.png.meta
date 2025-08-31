@@ -69,12 +69,12 @@ TextureImporter:
   platformSettings:
   - serializedVersion: 3
     buildTarget: DefaultTexturePlatform
-    maxTextureSize: 2048
+    maxTextureSize: 1024
     resizeAlgorithm: 0
     textureFormat: -1
     textureCompression: 1
-    compressionQuality: 50
-    crunchedCompression: 0
+    compressionQuality: 100
+    crunchedCompression: 1
     allowsAlphaSplitting: 0
     overridden: 0
     ignorePlatformSupport: 0
@@ -124,18 +124,18 @@ TextureImporter:
     sprites: []
     outline: []
     physicsShape:
-    - - {x: -102.5, y: -175.5}
-      - {x: -181.5, y: -138.5}
-      - {x: -206.5, y: -71.5}
-      - {x: -174.5, y: 3.5}
-      - {x: -86.5, y: 66.5}
-      - {x: 22.5, y: 92.5}
-      - {x: 131.5, y: 87.5}
-      - {x: 207.5, y: 60.5}
-      - {x: 250.5, y: 2.5}
-      - {x: 264.5, y: -67.5}
-      - {x: 237.5, y: -142.5}
-      - {x: 180.5, y: -176.5}
+    - - {x: -126, y: -146}
+      - {x: -201, y: -109}
+      - {x: -229, y: -42}
+      - {x: -198, y: 36}
+      - {x: -114, y: 98}
+      - {x: 1, y: 124}
+      - {x: 112, y: 121}
+      - {x: 183, y: 93}
+      - {x: 225, y: 35}
+      - {x: 240, y: -35}
+      - {x: 214, y: -111}
+      - {x: 160, y: -145}
     bones: []
     spriteID: 5e97eb03825dee720800000000000000
     internalID: 1537655665
