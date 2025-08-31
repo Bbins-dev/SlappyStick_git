@@ -446,7 +446,7 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: 
   useEditorOverride: 1
-  editorOverrideLevel: {fileID: 11400000, guid: 81859e54414c9e14a8bcde2976f757a8, type: 2}
+  editorOverrideLevel: {fileID: 11400000, guid: 6b6e3c517ce8de947bb5dcce2032bd33, type: 2}
   dynamicRoot: {fileID: 0}
 --- !u!4 &926394322
 Transform:
