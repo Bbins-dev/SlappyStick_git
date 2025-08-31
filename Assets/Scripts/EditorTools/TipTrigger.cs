@@ -111,12 +111,11 @@ public class TipTrigger : MonoBehaviour
         triggered = true;
         Debug.Log($"[TipTrigger] ★★★ 트리거 활성화됨! ★★★ Time: {Time.time:F3}");
 
-        // 즉시 실행 항목들
-        SaveReplayOnSuccess();
-        onStageCleared?.Invoke();
-        TryNotifyGameManager();
+        // ★★★ 모든 UI 관련 호출을 wobble 완료 후로 연기 (리플레이 저장 후 표시)
+        // onStageCleared?.Invoke(); // 즉시 호출하지 않음
+        // TryNotifyGameManager(); // 즉시 호출하지 않음
         
-        // Wobble 이펙트 시작
+        // Wobble 이펙트 시작 (완료 후 리플레이 저장 및 UI 표시)
         StartCoroutine(DoStuckSequence(other));
     }
 
@@ -270,6 +269,14 @@ public class TipTrigger : MonoBehaviour
             // Wobble 종료: 다른 Rigidbody2D 원래대로 복원
             SetOtherRigidbodiesKinematic(false, stickRoot);
         }
+        
+        // ★★★ Wobble 효과 완료 후 리플레이 저장 및 모든 UI 표시
+        Debug.Log($"[TipTrigger] Wobble 완료! 이제 리플레이 저장 및 UI 표시");
+        SaveReplayOnSuccess();
+        
+        // 리플레이 저장 완료 후 모든 UI 관련 호출
+        TryNotifyGameManager();
+        onStageCleared?.Invoke();
     }
 
     [ContextMenu("Debug Reset Triggered")]

@@ -87,6 +87,7 @@ public class ClearPopupController : MonoBehaviour
 
         if (pauseOnShow) Time.timeScale = 0f;
 
+        // ★★★ 이제 ClearPopup이 표시되는 시점에 이미 리플레이가 저장되어 있음
         RefreshButtons();
 
         var gm = GameManager.Instance;
@@ -207,6 +208,9 @@ public class ClearPopupController : MonoBehaviour
         var activeScene = UnityEngine.SceneManagement.SceneManager.GetActiveScene();
         return activeScene.name.Contains("Making") || activeScene.name.Contains("making");
     }
+
+    // ★★★ ShowWithReplayCheck() 코루틴 제거 - 더 이상 필요하지 않음
+    // 이제 ClearPopup이 표시되는 시점에 이미 리플레이가 저장되어 있음
 
     // ─────────────────────────────────────────────────────────────────────────
     // Button handlers
