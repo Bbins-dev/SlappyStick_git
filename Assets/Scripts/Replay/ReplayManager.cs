@@ -36,7 +36,7 @@ public class ReplayManager : MonoBehaviour
 
     // Binary header
     const uint MAGIC = 0x53525032; // "SRP2"
-    const int VERSION = 2;
+    const int VERSION = 3; // v3: 고유 식별자 시스템 지원
 
     [Header("Record Settings")]
     [Tooltip("Sampling interval in seconds (unscaled)")]
@@ -52,7 +52,7 @@ public class ReplayManager : MonoBehaviour
     // ---- runtime state (new unified buffers) ----
     private readonly List<Transform> _tracks = new();
     private readonly List<Rigidbody2D> _trackRBs = new();
-    private readonly List<string> _trackPaths = new();
+    private readonly List<string> _trackIdentifiers = new(); // 고유 식별자 저장
 
     private readonly List<float> _times = new(2048);
     private readonly List<Vector3> _pos = new(4096);
@@ -141,7 +141,7 @@ public class ReplayManager : MonoBehaviour
         {
             step = recordStep,
             trackCount = _trackCount,
-            paths = _trackPaths.ToArray(),
+            identifiers = _trackIdentifiers.ToArray(),
             times = _times.ToArray(),
             pos = _pos.ToArray(),
             rotZ = _rotZ.ToArray()
@@ -212,7 +212,7 @@ public class ReplayManager : MonoBehaviour
 
     private void CollectCaptureTargets()
     {
-        _tracks.Clear(); _trackRBs.Clear(); _trackPaths.Clear();
+        _tracks.Clear(); _trackRBs.Clear(); _trackIdentifiers.Clear();
 
         // 1) ReplayOptIn first (optional component)
         ReplayOptIn[] optIns = FindObjectsOfType<ReplayOptIn>(captureInactiveObjects);
@@ -251,7 +251,10 @@ public class ReplayManager : MonoBehaviour
         {
             _tracks.Add(t);
             _trackRBs.Add(t.GetComponent<Rigidbody2D>());
-            _trackPaths.Add(BuildFullPath(t));
+            
+            // 고유 식별자 생성/가져오기
+            var uniqueId = GetOrCreateUniqueId(t);
+            _trackIdentifiers.Add(uniqueId.GetFullIdentifier());
         }
 
         if (includeChildren)
@@ -271,6 +274,19 @@ public class ReplayManager : MonoBehaviour
                 return true;
         }
         return false;
+    }
+
+    /// <summary>
+    /// Transform에 ReplayUniqueId 컬포넌트를 찾거나 생성
+    /// </summary>
+    private ReplayUniqueId GetOrCreateUniqueId(Transform t)
+    {
+        var uniqueId = t.GetComponent<ReplayUniqueId>();
+        if (uniqueId == null)
+        {
+            uniqueId = t.gameObject.AddComponent<ReplayUniqueId>();
+        }
+        return uniqueId;
     }
 
     private static string BuildFullPath(Transform t)
@@ -295,10 +311,13 @@ public class ReplayManager : MonoBehaviour
             bw.Write(d.step);
             bw.Write(d.trackCount);
 
-            // paths
-            bw.Write(d.paths.Length);
-            for (int i = 0; i < d.paths.Length; i++)
-                bw.Write(d.paths[i] ?? "");
+            // identifiers (v3 이상)
+            bw.Write(d.identifiers?.Length ?? 0);
+            if (d.identifiers != null)
+            {
+                for (int i = 0; i < d.identifiers.Length; i++)
+                    bw.Write(d.identifiers[i] ?? "");
+            }
 
             // times
             bw.Write(d.times.Length);
@@ -335,7 +354,8 @@ public class ReplayManager : MonoBehaviour
             using var br = new BinaryReader(fs);
 
             if (br.ReadUInt32() != MAGIC) throw new IOException("Invalid header");
-            if (br.ReadInt32() != VERSION) throw new IOException("Version mismatch");
+            int version = br.ReadInt32();
+            if (version < 2 || version > VERSION) throw new IOException($"Unsupported version: {version}");
 
             var data = new ReplayData
             {
@@ -343,10 +363,28 @@ public class ReplayManager : MonoBehaviour
                 trackCount = br.ReadInt32()
             };
 
-            int nPaths = br.ReadInt32();
-            data.paths = new string[nPaths];
-            for (int i = 0; i < nPaths; i++)
-                data.paths[i] = br.ReadString();
+            int nIds = br.ReadInt32();
+            if (version >= 3)
+            {
+                // v3 이상: identifiers 사용
+                data.identifiers = new string[nIds];
+                for (int i = 0; i < nIds; i++)
+                    data.identifiers[i] = br.ReadString();
+            }
+            else
+            {
+                // v2 이하: 하위 호환성을 위해 paths를 identifiers로 변환
+#pragma warning disable CS0618 // Obsolete warning suppression
+                data.paths = new string[nIds];
+                data.identifiers = new string[nIds];
+                for (int i = 0; i < nIds; i++)
+                {
+                    string path = br.ReadString();
+                    data.paths[i] = path;
+                    data.identifiers[i] = path; // 경로를 식별자로 사용 (하위 호환)
+                }
+#pragma warning restore CS0618
+            }
 
             int nTimes = br.ReadInt32();
             data.times = new float[nTimes];

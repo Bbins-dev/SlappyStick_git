@@ -70,9 +70,9 @@ public class ReplayPlayer : MonoBehaviour
         int framesByRot = d.rotZ.Length / d.trackCount;
         if (framesByPos <= 0 || framesByRot <= 0 || framesByPos != framesByRot) return false;
 
-        if (d.paths == null || d.paths.Length < d.trackCount)
+        if (d.identifiers == null || d.identifiers.Length < d.trackCount)
         {
-            Debug.LogWarning($"[Replay] paths count {d.paths?.Length ?? 0} < trackCount {d.trackCount}. Missing names will use ghosts.");
+            Debug.LogWarning($"[Replay] identifiers count {d.identifiers?.Length ?? 0} < trackCount {d.trackCount}. Missing identifiers will use ghosts.");
         }
         return true;
     }
@@ -83,9 +83,9 @@ public class ReplayPlayer : MonoBehaviour
 
         for (int i = 0; i < data.trackCount; i++)
         {
-            string path = (data.paths != null && i < data.paths.Length) ? data.paths[i] : string.Empty;
+            string identifier = (data.identifiers != null && i < data.identifiers.Length) ? data.identifiers[i] : string.Empty;
 
-            var t = !string.IsNullOrEmpty(path) ? FindTransformInAllScenesByPath(path) : null;
+            var t = !string.IsNullOrEmpty(identifier) ? FindTransformByIdentifier(identifier) : null;
             if (t == null)
             {
                 var ghostRoot = GetOrCreateGhostRoot();
@@ -106,13 +106,45 @@ public class ReplayPlayer : MonoBehaviour
         return root.transform;
     }
 
-    private Transform FindTransformInAllScenesByPath(string fullPath)
+    /// <summary>
+    /// 고유 식별자로 Transform 찾기 (경로#ID 형태)
+    /// </summary>
+    private Transform FindTransformByIdentifier(string identifier)
+    {
+        if (string.IsNullOrEmpty(identifier)) return null;
+
+        // 메인 카메라 특례 (ID 없이 경로만 있을 수 있음)
+        if (identifier.EndsWith("Main Camera") && Camera.main)
+            return Camera.main.transform;
+
+        // 경로#ID 형태로 분리
+        string[] parts = identifier.Split('#');
+        string path = parts[0];
+        string uniqueId = parts.Length > 1 ? parts[1] : "";
+
+        // 고유 ID가 있으면 우선 찾기
+        if (!string.IsNullOrEmpty(uniqueId))
+        {
+            var allUniqueIds = FindObjectsOfType<ReplayUniqueId>();
+            foreach (var uid in allUniqueIds)
+            {
+                if (uid.UniqueId == uniqueId)
+                {
+                    return uid.transform;
+                }
+            }
+        }
+
+        // ID로 못 찾으면 경로로 폴백 (하위 호환)
+        return FindTransformByPath(path);
+    }
+
+    /// <summary>
+    /// 경로로 Transform 찾기 (하위 호환용)
+    /// </summary>
+    private Transform FindTransformByPath(string fullPath)
     {
         if (string.IsNullOrEmpty(fullPath)) return null;
-
-        // 메인 카메라 특례
-        if (fullPath.EndsWith("Main Camera") && Camera.main)
-            return Camera.main.transform;
 
         string[] parts = fullPath.Split('/');
         if (parts.Length == 0) return null;
