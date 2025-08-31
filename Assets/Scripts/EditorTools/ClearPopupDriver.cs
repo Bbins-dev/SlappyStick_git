@@ -85,8 +85,19 @@ public class ClearPopupDriver : MonoBehaviour
 
     private IEnumerator ShowAfterDelay()
     {
-        // TipTrigger에서 wobble 완료 후 리플레이 저장하므로, 여기서는 일반적인 지연만 적용
-        yield return new WaitForSecondsRealtime(popupDelay);
+        // ★★★ 일반 플레이에서는 즉시 표시, 리플레이에서만 지연 적용
+        bool isReplayMode = ReplayManager.Instance?.IsReplaying ?? false;
+        if (!isReplayMode)
+        {
+            // 일반 플레이: 즉시 표시 (wobble 완료 후 바로)
+            Debug.Log("[ClearPopupDriver] 일반 플레이 - 즉시 ClearPopup 표시");
+        }
+        else
+        {
+            // 리플레이: 지연 적용 (사용자가 리플레이를 충분히 볼 수 있도록)
+            Debug.Log($"[ClearPopupDriver] 리플레이 모드 - {popupDelay}초 지연 후 ClearPopup 표시");
+            yield return new WaitForSecondsRealtime(popupDelay);
+        }
 
         // ★★★ TipTrigger에서 이미 wobble 완료 후 리플레이를 저장하므로 중복 호출 제거
         // ReplayManager.Instance?.EndRecording(keepFile: true);
