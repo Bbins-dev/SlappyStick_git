@@ -13,7 +13,7 @@ MonoBehaviour:
   m_Name: Level_A_007
   m_EditorClassIdentifier: 
   cameraInitial:
-    position: {x: 0, y: 0, z: -10}
+    position: {x: 25.24, y: 9.3, z: -10}
     rotationZ: 0
     orthographicSize: 7
     fieldOfView: 0
@@ -65,32 +65,33 @@ MonoBehaviour:
   fulcrums: []
   obstacleSpawns:
   - prefabName: Ob_A_01
-    position: {x: 16.1, y: 1.8, z: 0}
+    position: {x: 16.12, y: 1.8, z: 0}
     rotationZ: 0
     scale: {x: 1, y: 1}
   - prefabName: Ob_A_01
-    position: {x: 19.4, y: 1.8, z: 0}
-    rotationZ: 0
-    scale: {x: 1, y: 1}
-  - prefabName: Ob_A_01
-    position: {x: 20.8, y: 1.8, z: 0}
+    position: {x: 19.9, y: 1.8, z: 0}
     rotationZ: 0
     scale: {x: 1, y: 1}
   - prefabName: Ob_A_03
-    position: {x: 9.12, y: 9.6, z: -2}
+    position: {x: 8.84, y: 9.566719, z: -2}
     rotationZ: 0
     scale: {x: 1, y: 1}
   targetSpawns:
   - prefabName: Ta_A_01
-    position: {x: 27.42, y: 1.99, z: 0}
+    position: {x: 25.27, y: 1.7, z: 0}
     rotationZ: 0
     scale: {x: 1, y: 1}
   fulcrumSpawns:
   - prefabName: Fu_A_01
-    position: {x: -0.72, y: 1.2, z: 0}
+    position: {x: -0.72, y: 1.1, z: 0}
     rotationZ: 0
     scale: {x: 1, y: 1}
   - prefabName: Fu_A_02
-    position: {x: 9.41, y: 1.28, z: -1}
+    position: {x: 9.2, y: 1.24, z: -1}
     rotationZ: 0
     scale: {x: 1, y: 1}
+  backgroundSpawn:
+    prefabName: 
+    position: {x: 0, y: 0, z: 0}
+    rotationZ: 0
+    scale: {x: 0, y: 0}

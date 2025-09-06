@@ -82,11 +82,16 @@ MonoBehaviour:
     scale: {x: 1, y: 1}
   targetSpawns:
   - prefabName: Ta_A_01
-    position: {x: 22.94, y: 1.99, z: 0}
+    position: {x: 22.94, y: 1.7, z: 0}
     rotationZ: 0
     scale: {x: 1, y: 1}
   fulcrumSpawns:
   - prefabName: Fu_A_01
-    position: {x: -0.72, y: 1.2, z: 0}
+    position: {x: -0.72, y: 1.1, z: 0}
     rotationZ: 0
     scale: {x: 1, y: 1}
+  backgroundSpawn:
+    prefabName: 
+    position: {x: 0, y: 0, z: 0}
+    rotationZ: 0
+    scale: {x: 0, y: 0}

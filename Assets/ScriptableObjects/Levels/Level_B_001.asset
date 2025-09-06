@@ -1,0 +1,113 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 957a53c456dcda94f8654a2619c8ae9c, type: 3}
+  m_Name: Level_B_001
+  m_EditorClassIdentifier: 
+  cameraInitial:
+    position: {x: 40.17, y: 9.35, z: -10}
+    rotationZ: 0
+    orthographicSize: 7
+    fieldOfView: 0
+  stick:
+    name: 
+    tag: 
+    layer: 0
+    position: {x: 0, y: 0, z: 0}
+    rotationZ: 0
+    scale: {x: 0, y: 0}
+    sprite: {fileID: 0}
+    color: {r: 0, g: 0, b: 0, a: 0}
+    sortingLayerName: 
+    sortingOrder: 0
+    colliders: []
+    hasRigidbody2D: 0
+    rbGravityScale: 0
+    tip:
+      localPosition: {x: 0, y: 0}
+      localRotationZ: 0
+      collider:
+        kind: 0
+        isTrigger: 0
+        offset: {x: 0, y: 0}
+        size: {x: 0, y: 0}
+        radius: 0
+        capsuleDirection: 0
+        paths: []
+        edgePoints: []
+  stickSpawn:
+    prefabName: St_A_01
+    position: {x: 0.58, y: 2.45, z: 10}
+    rotationZ: 0
+    scale: {x: 1, y: 1}
+  targets: []
+  obstacles: []
+  fulcrums: []
+  obstacleSpawns:
+  - prefabName: Ob_A_01
+    position: {x: 22.679087, y: 1.8809047, z: 0}
+    rotationZ: 0
+    scale: {x: 1, y: 1}
+  - prefabName: Ob_B_01
+    position: {x: 13.1, y: 1.32, z: 0}
+    rotationZ: 0
+    scale: {x: 1, y: 1}
+  targetSpawns:
+  - prefabName: Ta_A_01
+    position: {x: 40.2, y: 2.16, z: 0}
+    rotationZ: 0
+    scale: {x: 1, y: 1}
+  fulcrumSpawns:
+  - prefabName: Fu_B_04
+    position: {x: 17.47, y: 1.6, z: 0}
+    rotationZ: 0
+    scale: {x: 1, y: 1}
+  - prefabName: Fu_B_02
+    position: {x: 7.66, y: 1.6, z: 0}
+    rotationZ: 0
+    scale: {x: 1, y: 1}
+  - prefabName: Fu_B_01
+    position: {x: 7.68, y: 0.6, z: -1}
+    rotationZ: 0
+    scale: {x: 1, y: 1}
+  - prefabName: Fu_B_01
+    position: {x: 17.46, y: 0.6, z: 0}
+    rotationZ: 0
+    scale: {x: 1, y: 1}
+  - prefabName: Fu_B_01
+    position: {x: 27.79, y: 0.6, z: 0}
+    rotationZ: 0
+    scale: {x: 1, y: 1}
+  - prefabName: Fu_B_01
+    position: {x: 33.32, y: 0.6, z: 0}
+    rotationZ: 0
+    scale: {x: 1, y: 1}
+  - prefabName: Fu_B_01
+    position: {x: 40.2, y: 0.6, z: 0}
+    rotationZ: 0
+    scale: {x: 1, y: 1}
+  - prefabName: Fu_B_03
+    position: {x: 27.76, y: 1.5, z: 0}
+    rotationZ: 0
+    scale: {x: 1, y: 1}
+  - prefabName: Fu_B_05
+    position: {x: 33.9, y: 1.5, z: 1}
+    rotationZ: 0
+    scale: {x: 1, y: 1}
+  - prefabName: Fu_A_01
+    position: {x: -0.72, y: 1.1, z: 0}
+    rotationZ: 0
+    scale: {x: 1, y: 1}
+  backgroundSpawn:
+    prefabName: 
+    position: {x: 0, y: 0, z: 0}
+    rotationZ: 0
+    scale: {x: 0, y: 0}
