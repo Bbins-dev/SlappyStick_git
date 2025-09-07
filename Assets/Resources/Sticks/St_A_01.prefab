@@ -15,6 +15,7 @@ GameObject:
   - component: {fileID: 7316463347069776646}
   - component: {fileID: 8124580775931137357}
   - component: {fileID: 6558559733572725174}
+  - component: {fileID: 5262030977347533181}
   m_Layer: 3
   m_Name: St_A_01
   m_TagString: Stick
@@ -223,6 +224,20 @@ MonoBehaviour:
   contactStuckSeconds: 0.5
   angularFlipWindowSeconds: 1.2
   angularFlipCountToReset: 10
+--- !u!114 &5262030977347533181
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 177131241622479875}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: b15408fea826f9d4b983b994835a0501, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  Offset: {x: 0.26, y: 0.85, z: 2.97}
+  Material: {fileID: 2100000, guid: edea19fd15e8dfd46a9a1674db053f71, type: 2}
 --- !u!1 &5634899372718604596
 GameObject:
   m_ObjectHideFlags: 0
